@@ -1,3 +1,4 @@
+
 namespace OrderDbLib.Entities
 {
     /// <summary>
@@ -12,8 +13,8 @@ namespace OrderDbLib.Entities
         public User? ReceiverUser { get; set; }
         public ReceiverInfo? ReceiverInfo { get; set; }
         public DeliveryInfo? DeliveryInfo { get; set; }
-        public int? DeliveryManId { get; set; }
-        public DeliveryMan? DeliveryMan { get; set; }
+        public int? RiderId { get; set; }
+        public Rider? Rider { get; set; }
         public PaymentInfo? PaymentInfo { get; set; }
         public int Status { get; set; }
     }

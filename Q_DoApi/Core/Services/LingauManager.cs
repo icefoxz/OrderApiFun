@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using OrderDbLib;
 using OrderDbLib.Entities;
+using Q_DoApi.Core.Utls;
 
 namespace OrderApiFun.Core.Services;
 
@@ -13,7 +14,7 @@ public class LingauManager
     {
         Db = db;
     }
-
+    //更新lingau
     public async Task UpdateLingauBalanceAsync(string userId, float amount,ILogger log)
     {
         var user = await GetUserAsync(userId);
@@ -21,7 +22,23 @@ public class LingauManager
         user.Lingau.Credit += amount;
         user.Lingau.UpdateFileTimeStamp();
         user.UpdateFileTimeStamp();
-        log.LogInformation($"Lingau balance updated: Amount : {amount}, User[{userId}] from {lastCredit} to {user.Lingau.Credit}.");
+        log.Event($"Amount : {amount}, User[{userId}].{lastCredit} to {user.Lingau.Credit}");
+        await Db.SaveChangesAsync();
+    }
+    //lingau转账
+    public async Task TransferLingauAsync(string fromUserId, string toUserId, float amount, ILogger log)
+    {
+        var fromUser = await GetUserAsync(fromUserId);
+        var toUser = await GetUserAsync(toUserId);
+        var fromLastCredit = fromUser.Lingau.Credit;
+        var toLastCredit = toUser.Lingau.Credit;
+        fromUser.Lingau.Credit -= amount;
+        toUser.Lingau.Credit += amount;
+        fromUser.Lingau.UpdateFileTimeStamp();
+        toUser.Lingau.UpdateFileTimeStamp();
+        fromUser.UpdateFileTimeStamp();
+        toUser.UpdateFileTimeStamp();
+        log.Event($"Amount : {amount}, From User[{fromUserId}].{fromLastCredit} to {fromUser.Lingau.Credit}, ToUser[{toUserId}] from {toLastCredit} to {toUser.Lingau.Credit}.");
         await Db.SaveChangesAsync();
     }
 

@@ -25,10 +25,10 @@ namespace OrderHelperLib.Utl
         private const string LoginApi = "Anonymous_LoginApi";
         private const string ReloginApi = "User_ReloginApi";
         private const string TestApi = "User_TestApi";
-        private const string CreateDeliveryManApi = "User_CreateDeliveryMan";
+        private const string CreateRiderApi = "User_CreateRider";
         private const string CreateDeliveryOrderApi = "User_CreateDeliveryOrder";
-        private const string AssignDeliveryManApi = "DeliveryMan_AssignDeliveryMan";
-        private const string UpdateOrderStatusApi = "DeliveryMan_UpdateOrderStatus";
+        private const string AssignRiderApi = "Rider_AssignRider";
+        private const string UpdateOrderStatusApi = "Rider_UpdateOrderStatus";
 
         // Register
         public static void Register(string username, string email, string password, Action<string> onSuccessAction,
@@ -92,8 +92,8 @@ namespace OrderHelperLib.Utl
             Call(TestApi, onSuccessAction, onFailedAction);
 
         // CreateDeliveryMan
-        public static void CreateDeliveryMan(Action<string> onSuccessAction, Action<string> onFailedAction) =>
-            Call(CreateDeliveryManApi, onSuccessAction, onFailedAction);
+        public static void CreateRider(Action<string> onSuccessAction, Action<string> onFailedAction) =>
+            Call(CreateRiderApi, onSuccessAction, onFailedAction);
 
         // CreateDeliveryOrder
         public static void CreateDeliveryOrder(DeliveryOrderDto orderDto, Action<string> onSuccessAction,
@@ -101,8 +101,8 @@ namespace OrderHelperLib.Utl
             onSuccessAction, onFailedAction);
 
         // AssignDeliveryMan
-        public static void AssignDeliveryMan(DeliveryAssignmentDto assignmentDto, Action<string> onSuccessAction,
-            Action<string> onFailedAction) => Call(AssignDeliveryManApi, JsonConvert.SerializeObject(assignmentDto),
+        public static void AssignRider(DeliveryAssignmentDto assignmentDto, Action<string> onSuccessAction,
+            Action<string> onFailedAction) => Call(AssignRiderApi, JsonConvert.SerializeObject(assignmentDto),
             onSuccessAction, onFailedAction);
 
         // UpdateOrderStatus

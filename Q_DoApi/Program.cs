@@ -57,7 +57,7 @@ var host = new HostBuilder()
 
         //Business Services
         s.AddScoped<DeliveryOrderService>();
-        s.AddScoped<DeliveryManManager>();
+        s.AddScoped<RiderManager>();
         s.AddScoped<LingauManager>();
     })
     .Build();

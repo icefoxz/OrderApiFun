@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using OrderDbLib;
 
@@ -11,9 +12,11 @@ using OrderDbLib;
 namespace OrderDbLib.Migrations
 {
     [DbContext(typeof(OrderDbContext))]
-    partial class OrderDbContextModelSnapshot : ModelSnapshot
+    [Migration("20230510102030_init")]
+    partial class init
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -224,7 +227,10 @@ namespace OrderDbLib.Migrations
                     b.Property<long>("UpdatedAt")
                         .HasColumnType("bigint");
 
-                    b.Property<string>("UserRefId")
+                    b.Property<string>("UserId")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("UserId1")
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("Version")
@@ -232,9 +238,13 @@ namespace OrderDbLib.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserRefId")
+                    b.HasIndex("UserId")
                         .IsUnique()
-                        .HasFilter("[UserRefId] IS NOT NULL");
+                        .HasFilter("[UserId] IS NOT NULL");
+
+                    b.HasIndex("UserId1")
+                        .IsUnique()
+                        .HasFilter("[UserId1] IS NOT NULL");
 
                     b.ToTable("Lingaus");
                 });
@@ -346,9 +356,6 @@ namespace OrderDbLib.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<string>("LingauId")
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
 
@@ -395,8 +402,6 @@ namespace OrderDbLib.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("LingauId");
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
@@ -647,8 +652,12 @@ namespace OrderDbLib.Migrations
                 {
                     b.HasOne("OrderDbLib.Entities.User", null)
                         .WithOne()
-                        .HasForeignKey("OrderDbLib.Entities.Lingau", "UserRefId")
+                        .HasForeignKey("OrderDbLib.Entities.Lingau", "UserId")
                         .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("OrderDbLib.Entities.User", null)
+                        .WithOne("Lingau")
+                        .HasForeignKey("OrderDbLib.Entities.Lingau", "UserId1");
                 });
 
             modelBuilder.Entity("OrderDbLib.Entities.OrderTag", b =>
@@ -669,18 +678,14 @@ namespace OrderDbLib.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("OrderDbLib.Entities.User", b =>
-                {
-                    b.HasOne("OrderDbLib.Entities.Lingau", "Lingau")
-                        .WithMany()
-                        .HasForeignKey("LingauId");
-
-                    b.Navigation("Lingau");
-                });
-
             modelBuilder.Entity("OrderDbLib.Entities.DeliveryOrder", b =>
                 {
                     b.Navigation("Tags");
+                });
+
+            modelBuilder.Entity("OrderDbLib.Entities.User", b =>
+                {
+                    b.Navigation("Lingau");
                 });
 #pragma warning restore 612, 618
         }

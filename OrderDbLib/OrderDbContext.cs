@@ -7,7 +7,7 @@ namespace OrderDbLib
     public class OrderDbContext: IdentityDbContext<User>
     {
         public DbSet<DeliveryOrder> DeliveryOrders { get; set; }
-        public DbSet<DeliveryMan> DeliveryMen { get; set; }
+        public DbSet<Rider> Riders { get; set; }
         public DbSet<Lingau> Lingaus { get; set; }
 
         public OrderDbContext(DbContextOptions op):base(op) { }
@@ -32,7 +32,7 @@ namespace OrderDbLib
             b.Entity<DeliveryOrder>().OwnsOne(d => d.PaymentInfo);
             b.Entity<User>().HasOne<Lingau>()
                 .WithOne()
-                .HasForeignKey<Lingau>(l => l.UserId)
+                .HasForeignKey<Lingau>(l => l.UserRefId)
                 .OnDelete(DeleteBehavior.Cascade);
             b.Entity<Lingau>()
                 .Property(l => l.Id)

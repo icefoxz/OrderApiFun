@@ -13,12 +13,12 @@ namespace OrderApiFun.Core.Services
         private OrderDbContext Db { get; }
         private UserManager<User> UserManager { get; }
         private LingauManager LingauManager { get; }
-        private DeliveryManManager DeliveryManManager { get; }
-        public DeliveryOrderService(OrderDbContext db, UserManager<User> userManager, DeliveryManManager deliveryManManager, LingauManager lingauManager)
+        private RiderManager RiderManager { get; }
+        public DeliveryOrderService(OrderDbContext db, UserManager<User> userManager, RiderManager riderManager, LingauManager lingauManager)
         {
             Db = db;
             UserManager = userManager;
-            DeliveryManManager = deliveryManManager;
+            RiderManager = riderManager;
             LingauManager = lingauManager;
         }
 
@@ -89,10 +89,10 @@ namespace OrderApiFun.Core.Services
             return (isValid, message);
         }
 
-        public async Task<DeliveryOrder> UpdateOrderStatusByDeliveryManAsync(int deliveryManId, int orderId, DeliveryOrderStatus newStatus)
+        public async Task<DeliveryOrder> UpdateOrderStatusByRiderAsync(int deliveryManId, int orderId, DeliveryOrderStatus newStatus)
         {
             // 验证DeliveryMan的权限
-            var deliveryMan = await DeliveryManManager.FindByIdAsync(deliveryManId);
+            var deliveryMan = await RiderManager.FindByIdAsync(deliveryManId);
             if (deliveryMan == null)
             {
                 throw new InvalidOperationException("DeliveryMan not found");
@@ -179,16 +179,16 @@ namespace OrderApiFun.Core.Services
         /// <param name="deliveryManId"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentException"></exception>
-        public async Task AssignDeliveryManAsync(int deliveryOrderId, int deliveryManId)
+        public async Task AssignRiderAsync(int deliveryOrderId, int deliveryManId)
         {
             var deliveryOrder = await Db.DeliveryOrders.FindAsync(deliveryOrderId);
-            var deliveryMan = await DeliveryManManager.FindByIdAsync(deliveryManId);
+            var deliveryMan = await RiderManager.FindByIdAsync(deliveryManId);
             if (deliveryMan == null)
                 throw new NullReferenceException($"DeliveryMan[{deliveryManId}] not found!");
             if (deliveryOrder == null)
                 throw new ArgumentException("Delivery order not found.");
-            deliveryOrder.DeliveryManId = deliveryMan.Id;
-            deliveryOrder.DeliveryMan = deliveryMan;
+            deliveryOrder.RiderId = deliveryMan.Id;
+            deliveryOrder.Rider = deliveryMan;
             deliveryOrder.Status = (int)DeliveryOrderStatus.Accepted;
             deliveryOrder.UpdateFileTimeStamp();
             await Db.SaveChangesAsync();
@@ -219,7 +219,7 @@ namespace OrderApiFun.Core.Services
             log.LogInformation($"GetDeliveryOrders: userId={userId}, limit={limit}, page={page}");
             page = Math.Max(1, page);
             return await Db.DeliveryOrders
-                .Include(d=>d.DeliveryMan)
+                .Include(d=>d.Rider)
                 .Include(d=>d.ReceiverUser)
                 .Include(d=>d.User)
                 .ThenInclude(u=>u.Lingau)

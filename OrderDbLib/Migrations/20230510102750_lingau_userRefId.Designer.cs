@@ -12,8 +12,8 @@ using OrderDbLib;
 namespace OrderDbLib.Migrations
 {
     [DbContext(typeof(OrderDbContext))]
-    [Migration("20230509054422_init")]
-    partial class init
+    [Migration("20230510102750_lingau_userRefId")]
+    partial class lingau_userRefId
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -158,46 +158,6 @@ namespace OrderDbLib.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("OrderDbLib.Entities.DeliveryMan", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<long>("CreatedAt")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("DeletedAt")
-                        .HasColumnType("bigint");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("IsWorking")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Location")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<long>("UpdatedAt")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("Version")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("DeliveryMen");
-                });
-
             modelBuilder.Entity("OrderDbLib.Entities.DeliveryOrder", b =>
                 {
                     b.Property<int>("Id")
@@ -212,14 +172,14 @@ namespace OrderDbLib.Migrations
                     b.Property<long>("DeletedAt")
                         .HasColumnType("bigint");
 
-                    b.Property<int?>("DeliveryManId")
-                        .HasColumnType("int");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
                     b.Property<string>("ReceiverUserId")
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<int?>("RiderId")
+                        .HasColumnType("int");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -236,9 +196,9 @@ namespace OrderDbLib.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DeliveryManId");
-
                     b.HasIndex("ReceiverUserId");
+
+                    b.HasIndex("RiderId");
 
                     b.HasIndex("UserId");
 
@@ -267,10 +227,7 @@ namespace OrderDbLib.Migrations
                     b.Property<long>("UpdatedAt")
                         .HasColumnType("bigint");
 
-                    b.Property<string>("UserId")
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("UserId1")
+                    b.Property<string>("UserRefId")
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("Version")
@@ -278,13 +235,9 @@ namespace OrderDbLib.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId")
+                    b.HasIndex("UserRefId")
                         .IsUnique()
-                        .HasFilter("[UserId] IS NOT NULL");
-
-                    b.HasIndex("UserId1")
-                        .IsUnique()
-                        .HasFilter("[UserId1] IS NOT NULL");
+                        .HasFilter("[UserRefId] IS NOT NULL");
 
                     b.ToTable("Lingaus");
                 });
@@ -328,6 +281,46 @@ namespace OrderDbLib.Migrations
                     b.ToTable("OrderTag");
                 });
 
+            modelBuilder.Entity("OrderDbLib.Entities.Rider", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("DeletedAt")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsWorking")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Location")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Riders");
+                });
+
             modelBuilder.Entity("OrderDbLib.Entities.User", b =>
                 {
                     b.Property<string>("Id")
@@ -355,6 +348,9 @@ namespace OrderDbLib.Migrations
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
+
+                    b.Property<string>("LingauId")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
@@ -402,6 +398,8 @@ namespace OrderDbLib.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LingauId");
 
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
@@ -465,27 +463,16 @@ namespace OrderDbLib.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("OrderDbLib.Entities.DeliveryMan", b =>
-                {
-                    b.HasOne("OrderDbLib.Entities.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("OrderDbLib.Entities.DeliveryOrder", b =>
                 {
-                    b.HasOne("OrderDbLib.Entities.DeliveryMan", "DeliveryMan")
-                        .WithMany()
-                        .HasForeignKey("DeliveryManId");
-
                     b.HasOne("OrderDbLib.Entities.User", "ReceiverUser")
                         .WithMany()
                         .HasForeignKey("ReceiverUserId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("OrderDbLib.Entities.Rider", "Rider")
+                        .WithMany()
+                        .HasForeignKey("RiderId");
 
                     b.HasOne("OrderDbLib.Entities.User", "User")
                         .WithMany()
@@ -642,8 +629,6 @@ namespace OrderDbLib.Migrations
 
                     b.Navigation("DeliveryInfo");
 
-                    b.Navigation("DeliveryMan");
-
                     b.Navigation("EndCoordinates");
 
                     b.Navigation("ItemInfo");
@@ -654,6 +639,8 @@ namespace OrderDbLib.Migrations
 
                     b.Navigation("ReceiverUser");
 
+                    b.Navigation("Rider");
+
                     b.Navigation("StartCoordinates");
 
                     b.Navigation("User");
@@ -663,12 +650,8 @@ namespace OrderDbLib.Migrations
                 {
                     b.HasOne("OrderDbLib.Entities.User", null)
                         .WithOne()
-                        .HasForeignKey("OrderDbLib.Entities.Lingau", "UserId")
+                        .HasForeignKey("OrderDbLib.Entities.Lingau", "UserRefId")
                         .OnDelete(DeleteBehavior.Cascade);
-
-                    b.HasOne("OrderDbLib.Entities.User", null)
-                        .WithOne("Lingau")
-                        .HasForeignKey("OrderDbLib.Entities.Lingau", "UserId1");
                 });
 
             modelBuilder.Entity("OrderDbLib.Entities.OrderTag", b =>
@@ -678,14 +661,29 @@ namespace OrderDbLib.Migrations
                         .HasForeignKey("DeliveryOrderId");
                 });
 
-            modelBuilder.Entity("OrderDbLib.Entities.DeliveryOrder", b =>
+            modelBuilder.Entity("OrderDbLib.Entities.Rider", b =>
                 {
-                    b.Navigation("Tags");
+                    b.HasOne("OrderDbLib.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("OrderDbLib.Entities.User", b =>
                 {
+                    b.HasOne("OrderDbLib.Entities.Lingau", "Lingau")
+                        .WithMany()
+                        .HasForeignKey("LingauId");
+
                     b.Navigation("Lingau");
+                });
+
+            modelBuilder.Entity("OrderDbLib.Entities.DeliveryOrder", b =>
+                {
+                    b.Navigation("Tags");
                 });
 #pragma warning restore 612, 618
         }

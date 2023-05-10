@@ -17,10 +17,10 @@ namespace Do_Api.Funcs
     {
         private LingauManager LingauManager { get; }
         private DeliveryOrderService DoService { get; }
-        private DeliveryManManager DmManager { get; }
+        private RiderManager DmManager { get; }
         private UserManager<User> UserManager { get; }
 
-        public DeliveryOrderFunc(DeliveryOrderService doService, UserManager<User> userManager, DeliveryManManager dmManager, LingauManager lingauManager)
+        public DeliveryOrderFunc(DeliveryOrderService doService, UserManager<User> userManager, RiderManager dmManager, LingauManager lingauManager)
         {
             DoService = doService;
             UserManager = userManager;
@@ -154,17 +154,17 @@ namespace Do_Api.Funcs
             return response;
         }
 
-        [Function(nameof(DeliveryMan_AssignDeliveryMan))]
-        public async Task<HttpResponseData> DeliveryMan_AssignDeliveryMan(
+        [Function(nameof(Rider_AssignRider))]
+        public async Task<HttpResponseData> Rider_AssignRider(
             [HttpTrigger(AuthorizationLevel.Function, "post")]
             HttpRequestData req,
             FunctionContext context)
         {
-            var log = context.GetLogger(nameof(DeliveryMan_AssignDeliveryMan));
+            var log = context.GetLogger(nameof(Rider_AssignRider));
             log.LogInformation("C# HTTP trigger function processed a request.");
             try
             {
-                var deliveryManId = GetDeliveryManId(context);
+                var deliveryManId = GetRiderId(context);
 
                 var bag = await req.GetBagAsync();
                 var oId = bag.Get<string>(0);
@@ -178,7 +178,7 @@ namespace Do_Api.Funcs
                 }
 
                 //assign deliveryMan
-                await DoService.AssignDeliveryManAsync(orderId, deliveryManId);
+                await DoService.AssignRiderAsync(orderId, deliveryManId);
 
                 var response = req.CreateResponse(HttpStatusCode.OK);
                 await response.WriteStringAsync("Delivery man assigned successfully.");
@@ -194,21 +194,21 @@ namespace Do_Api.Funcs
             }
         }
         //从context中获取当前的DeliveryManId
-        private static int GetDeliveryManId(FunctionContext context)
+        private static int GetRiderId(FunctionContext context)
         {
-            if (!int.TryParse(context.Items[Auth.DeliverManId].ToString(), out var deliveryManId))
+            if (!int.TryParse(context.Items[Auth.RiderId].ToString(), out var deliveryManId))
                 throw new NullReferenceException($"DeliveryMan[{deliveryManId}] not found!");
             return deliveryManId;
         }
 
-        [Function(nameof(DeliveryMan_UpdateOrderStatus))]
-        public async Task<HttpResponseData> DeliveryMan_UpdateOrderStatus(
+        [Function(nameof(Rider_UpdateOrderStatus))]
+        public async Task<HttpResponseData> Rider_UpdateOrderStatus(
             [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req, 
             FunctionContext context)
         {
-            var log = context.GetLogger(nameof(DeliveryMan_UpdateOrderStatus));
+            var log = context.GetLogger(nameof(Rider_UpdateOrderStatus));
             log.LogInformation("C# HTTP trigger function processed a request.");
-            var deliveryManId = GetDeliveryManId(context);
+            var deliveryManId = GetRiderId(context);
             DeliverySetStatusDto? dto;
             try
             {
@@ -236,7 +236,7 @@ namespace Do_Api.Funcs
                 var status = (DeliveryOrderStatus)dto.Status;
                 message = $"Order[{dto.DeliveryOrderId}].Update({status})";
                 // Assuming you have a static instance of the DeliveryOrderService
-                await DoService.UpdateOrderStatusByDeliveryManAsync(deliveryManId, dto.DeliveryOrderId, status);
+                await DoService.UpdateOrderStatusByRiderAsync(deliveryManId, dto.DeliveryOrderId, status);
                 var response = req.CreateResponse(HttpStatusCode.OK);
                 await response.WriteStringAsync(DataBag.Serialize(message));
                 return response;

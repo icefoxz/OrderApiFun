@@ -164,32 +164,6 @@ namespace OrderDbLib.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "DeliveryMen",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Location = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IsWorking = table.Column<bool>(type: "bit", nullable: false),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Version = table.Column<int>(type: "int", nullable: false),
-                    CreatedAt = table.Column<long>(type: "bigint", nullable: false),
-                    UpdatedAt = table.Column<long>(type: "bigint", nullable: false),
-                    DeletedAt = table.Column<long>(type: "bigint", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_DeliveryMen", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_DeliveryMen_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Lingaus",
                 columns: table => new
                 {
@@ -220,6 +194,32 @@ namespace OrderDbLib.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Riders",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Location = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IsWorking = table.Column<bool>(type: "bit", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Version = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<long>(type: "bigint", nullable: false),
+                    UpdatedAt = table.Column<long>(type: "bigint", nullable: false),
+                    DeletedAt = table.Column<long>(type: "bigint", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Riders", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Riders_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "DeliveryOrders",
                 columns: table => new
                 {
@@ -244,7 +244,7 @@ namespace OrderDbLib.Migrations
                     DeliveryInfo_Distance = table.Column<float>(type: "real", nullable: true),
                     DeliveryInfo_Weight = table.Column<float>(type: "real", nullable: true),
                     DeliveryInfo_Price = table.Column<float>(type: "real", nullable: true),
-                    DeliveryManId = table.Column<int>(type: "int", nullable: true),
+                    RiderId = table.Column<int>(type: "int", nullable: true),
                     PaymentInfo_Price = table.Column<float>(type: "real", nullable: true),
                     PaymentInfo_PaymentMethod = table.Column<int>(type: "int", nullable: true),
                     PaymentInfo_PaymentReference = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -273,9 +273,9 @@ namespace OrderDbLib.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_DeliveryOrders_DeliveryMen_DeliveryManId",
-                        column: x => x.DeliveryManId,
-                        principalTable: "DeliveryMen",
+                        name: "FK_DeliveryOrders_Riders_RiderId",
+                        column: x => x.RiderId,
+                        principalTable: "Riders",
                         principalColumn: "Id");
                 });
 
@@ -344,19 +344,14 @@ namespace OrderDbLib.Migrations
                 filter: "[NormalizedUserName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_DeliveryMen_UserId",
-                table: "DeliveryMen",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_DeliveryOrders_DeliveryManId",
-                table: "DeliveryOrders",
-                column: "DeliveryManId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_DeliveryOrders_ReceiverUserId",
                 table: "DeliveryOrders",
                 column: "ReceiverUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DeliveryOrders_RiderId",
+                table: "DeliveryOrders",
+                column: "RiderId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_DeliveryOrders_UserId",
@@ -381,6 +376,11 @@ namespace OrderDbLib.Migrations
                 name: "IX_OrderTag_DeliveryOrderId",
                 table: "OrderTag",
                 column: "DeliveryOrderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Riders_UserId",
+                table: "Riders",
+                column: "UserId");
         }
 
         /// <inheritdoc />
@@ -414,7 +414,7 @@ namespace OrderDbLib.Migrations
                 name: "DeliveryOrders");
 
             migrationBuilder.DropTable(
-                name: "DeliveryMen");
+                name: "Riders");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");

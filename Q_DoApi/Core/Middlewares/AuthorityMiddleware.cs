@@ -15,16 +15,16 @@ namespace OrderApiFun.Core.Middlewares
         private const string AuthorizationHeader = "Authorization";
         private const string AnonymousPrefix = "Anonymous";
         private const string UserPrefix = "User";
-        private const string DeliveryManPrefix = "DeliveryMan";
+        private const string RiderPrefix = "Rider";
 
-        public AuthorityMiddleware(JwtTokenService jwtTokenService, DeliveryManManager deliveryManManager)
+        public AuthorityMiddleware(JwtTokenService jwtTokenService, RiderManager riderManager)
         {
             JwtTokenService = jwtTokenService;
-            DeliveryManManager = deliveryManManager;
+            RiderManager = riderManager;
         }
 
         private JwtTokenService JwtTokenService { get; }
-        private DeliveryManManager DeliveryManManager { get; }
+        private RiderManager RiderManager { get; }
 
         //主要中间件入口,实现基于名字"前缀_功能"格式的api验证方法
         public async Task Invoke(FunctionContext context, FunctionExecutionDelegate next)
@@ -41,8 +41,8 @@ namespace OrderApiFun.Core.Middlewares
                 case UserPrefix:
                     await UserInvocationAsync(functionName,context, next, log);
                     return;
-                case DeliveryManPrefix:
-                    await DeliverManInvocationAsync(context, next, log);
+                case RiderPrefix:
+                    await RiderInvocationAsync(context, next, log);
                     return;
             }
 
@@ -54,7 +54,7 @@ namespace OrderApiFun.Core.Middlewares
             context.GetInvocationResult().Value = response;
         }
         //DeliverMan_Function
-        private async Task DeliverManInvocationAsync(FunctionContext context, FunctionExecutionDelegate next,
+        private async Task RiderInvocationAsync(FunctionContext context, FunctionExecutionDelegate next,
             ILogger<AuthorityMiddleware> log)
         {
             var req = await context.GetHttpRequestDataAsync();
@@ -72,9 +72,9 @@ namespace OrderApiFun.Core.Middlewares
             }
 
             if (!await VerifyTokenTypeAsync(context, log, result, req, JwtTokenService.AccessTokenHeader)) return;
-            var deliveryMan = await DeliveryManManager.FindByUserIdAsync(result.Principal.Identity.Name);
-            if (deliveryMan == null) return;
-            context.Items[Auth.DeliverManId] = deliveryMan.Id;
+            var rider = await RiderManager.FindByUserIdAsync(result.Principal.Identity.Name);
+            if (rider == null) return;
+            context.Items[Auth.RiderId] = rider.Id;
             await next.Invoke(context);
         }
 

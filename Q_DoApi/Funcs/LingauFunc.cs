@@ -1,9 +1,12 @@
 ﻿using System.Net;
+using Mapster;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using OrderApiFun.Core.Middlewares;
 using OrderApiFun.Core.Services;
+using OrderHelperLib.DtoModels.DeliveryOrders;
+using OrderHelperLib;
 using Utls;
 
 namespace Do_Api.Funcs;
@@ -17,22 +20,22 @@ public class LingauFunc
         LingauManager = lingauManager;
     }
 
-    [Function(nameof(User_GetLingauBalance))]
-    public async Task<HttpResponseData> User_GetLingauBalance(
+    [Function(nameof(User_GetLingau))]
+    public async Task<HttpResponseData> User_GetLingau(
         [HttpTrigger(AuthorizationLevel.Function, "get")]
         HttpRequestData req,
         FunctionContext context)
     {
-        var log = context.GetLogger(nameof(User_GetLingauBalance));
+        var log = context.GetLogger(nameof(User_GetLingau));
         log.LogInformation("C# HTTP trigger function processed a request.");
 
         var userId = context.Items[Auth.UserId].ToString();
         var bag = await req.GetBagAsync();
         // Retrieve the user's Lingau balance
-        var balance = await LingauManager.GetLingauBalanceAsync(userId);
+        var lingau = await LingauManager.GetLingauAsync(userId);
 
         var response = req.CreateResponse(HttpStatusCode.OK);
-        await response.WriteStringAsync($"User's Lingau balance: {balance}");
+        await response.WriteStringAsync(DataBag.Serialize(lingau.Adapt<LingauDto>()));
         return response;
     }
 }

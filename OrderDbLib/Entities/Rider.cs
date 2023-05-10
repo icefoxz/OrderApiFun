@@ -1,6 +1,6 @@
 namespace OrderDbLib.Entities
 {
-    public class DeliveryMan : Entity
+    public class Rider : Entity
     {
         public string? Location { get; set; }
         public bool IsWorking { get; set; }
