@@ -2,7 +2,7 @@
 namespace OrderDbLib.Entities
 {
     /// <summary>
-    /// 订单的基础类, 主要已线程方式实现各种状态<see cref="OrderTag"/>
+    /// 订单的基础类, 主要实现了<see cref="OrderTag"/>
     /// </summary>
     public class Order : Entity
     {

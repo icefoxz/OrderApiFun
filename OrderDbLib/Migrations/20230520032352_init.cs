@@ -26,38 +26,6 @@ namespace OrderDbLib.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "AspNetUsers",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    NormalizedPhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Version = table.Column<int>(type: "int", nullable: false),
-                    CreatedAt = table.Column<long>(type: "bigint", nullable: false),
-                    UpdatedAt = table.Column<long>(type: "bigint", nullable: false),
-                    DeletedAt = table.Column<long>(type: "bigint", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
-                    UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    NormalizedEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    EmailConfirmed = table.Column<bool>(type: "bit", nullable: false),
-                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    SecurityStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PhoneNumberConfirmed = table.Column<bool>(type: "bit", nullable: false),
-                    TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    LockoutEnd = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
-                    LockoutEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    AccessFailedCount = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetUsers", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "AspNetRoleClaims",
                 columns: table => new
                 {
@@ -91,12 +59,6 @@ namespace OrderDbLib.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUserClaims", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_AspNetUserClaims_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -111,12 +73,6 @@ namespace OrderDbLib.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUserLogins", x => new { x.LoginProvider, x.ProviderKey });
-                    table.ForeignKey(
-                        name: "FK_AspNetUserLogins_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -135,12 +91,39 @@ namespace OrderDbLib.Migrations
                         principalTable: "AspNetRoles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_AspNetUserRoles_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUsers",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    NormalizedPhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Version = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<long>(type: "bigint", nullable: false),
+                    UpdatedAt = table.Column<long>(type: "bigint", nullable: false),
+                    DeletedAt = table.Column<long>(type: "bigint", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
+                    LingauId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    NormalizedEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    EmailConfirmed = table.Column<bool>(type: "bit", nullable: false),
+                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SecurityStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PhoneNumberConfirmed = table.Column<bool>(type: "bit", nullable: false),
+                    TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    LockoutEnd = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    LockoutEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    AccessFailedCount = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUsers", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -169,8 +152,7 @@ namespace OrderDbLib.Migrations
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false, defaultValueSql: "NEWID()"),
                     Credit = table.Column<float>(type: "real", nullable: false),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
-                    UserId1 = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    UserRefId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     Version = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<long>(type: "bigint", nullable: false),
                     UpdatedAt = table.Column<long>(type: "bigint", nullable: false),
@@ -181,16 +163,11 @@ namespace OrderDbLib.Migrations
                 {
                     table.PrimaryKey("PK_Lingaus", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Lingaus_AspNetUsers_UserId",
-                        column: x => x.UserId,
+                        name: "FK_Lingaus_AspNetUsers_UserRefId",
+                        column: x => x.UserRefId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Lingaus_AspNetUsers_UserId1",
-                        column: x => x.UserId1,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -199,9 +176,10 @@ namespace OrderDbLib.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Location = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Phone = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsWorking = table.Column<bool>(type: "bit", nullable: false),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
                     Version = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<long>(type: "bigint", nullable: false),
                     UpdatedAt = table.Column<long>(type: "bigint", nullable: false),
@@ -215,8 +193,7 @@ namespace OrderDbLib.Migrations
                         name: "FK_Riders_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -231,19 +208,21 @@ namespace OrderDbLib.Migrations
                     ItemInfo_Width = table.Column<float>(type: "real", nullable: true),
                     ItemInfo_Height = table.Column<float>(type: "real", nullable: true),
                     ItemInfo_Remark = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    StartCoordinates_PlaceId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     StartCoordinates_Address = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     StartCoordinates_Latitude = table.Column<double>(type: "float", nullable: true),
                     StartCoordinates_Longitude = table.Column<double>(type: "float", nullable: true),
+                    EndCoordinates_PlaceId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     EndCoordinates_Address = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     EndCoordinates_Latitude = table.Column<double>(type: "float", nullable: true),
                     EndCoordinates_Longitude = table.Column<double>(type: "float", nullable: true),
                     ReceiverUserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    MyStateId = table.Column<int>(type: "int", nullable: false),
                     ReceiverInfo_Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ReceiverInfo_PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ReceiverInfo_NormalizedPhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     DeliveryInfo_Distance = table.Column<float>(type: "real", nullable: true),
-                    DeliveryInfo_Weight = table.Column<float>(type: "real", nullable: true),
-                    DeliveryInfo_Price = table.Column<float>(type: "real", nullable: true),
+                    DeliveryInfo_Fee = table.Column<float>(type: "real", nullable: true),
                     RiderId = table.Column<int>(type: "int", nullable: true),
                     PaymentInfo_Price = table.Column<float>(type: "real", nullable: true),
                     PaymentInfo_PaymentMethod = table.Column<int>(type: "int", nullable: true),
@@ -337,6 +316,11 @@ namespace OrderDbLib.Migrations
                 column: "NormalizedEmail");
 
             migrationBuilder.CreateIndex(
+                name: "IX_AspNetUsers_LingauId",
+                table: "AspNetUsers",
+                column: "LingauId");
+
+            migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
                 table: "AspNetUsers",
                 column: "NormalizedUserName",
@@ -359,18 +343,11 @@ namespace OrderDbLib.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Lingaus_UserId",
+                name: "IX_Lingaus_UserRefId",
                 table: "Lingaus",
-                column: "UserId",
+                column: "UserRefId",
                 unique: true,
-                filter: "[UserId] IS NOT NULL");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Lingaus_UserId1",
-                table: "Lingaus",
-                column: "UserId1",
-                unique: true,
-                filter: "[UserId1] IS NOT NULL");
+                filter: "[UserRefId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_OrderTag_DeliveryOrderId",
@@ -381,11 +358,46 @@ namespace OrderDbLib.Migrations
                 name: "IX_Riders_UserId",
                 table: "Riders",
                 column: "UserId");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_AspNetUserClaims_AspNetUsers_UserId",
+                table: "AspNetUserClaims",
+                column: "UserId",
+                principalTable: "AspNetUsers",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_AspNetUserLogins_AspNetUsers_UserId",
+                table: "AspNetUserLogins",
+                column: "UserId",
+                principalTable: "AspNetUsers",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_AspNetUserRoles_AspNetUsers_UserId",
+                table: "AspNetUserRoles",
+                column: "UserId",
+                principalTable: "AspNetUsers",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_AspNetUsers_Lingaus_LingauId",
+                table: "AspNetUsers",
+                column: "LingauId",
+                principalTable: "Lingaus",
+                principalColumn: "Id");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropForeignKey(
+                name: "FK_Lingaus_AspNetUsers_UserRefId",
+                table: "Lingaus");
+
             migrationBuilder.DropTable(
                 name: "AspNetRoleClaims");
 
@@ -402,9 +414,6 @@ namespace OrderDbLib.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
-                name: "Lingaus");
-
-            migrationBuilder.DropTable(
                 name: "OrderTag");
 
             migrationBuilder.DropTable(
@@ -418,6 +427,9 @@ namespace OrderDbLib.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
+
+            migrationBuilder.DropTable(
+                name: "Lingaus");
         }
     }
 }

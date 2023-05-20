@@ -172,6 +172,9 @@ namespace OrderDbLib.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
+                    b.Property<int>("MyStateId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ReceiverUserId")
                         .HasColumnType("nvarchar(450)");
 
@@ -298,14 +301,16 @@ namespace OrderDbLib.Migrations
                     b.Property<bool>("IsWorking")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Location")
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Phone")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<long>("UpdatedAt")
                         .HasColumnType("bigint");
 
                     b.Property<string>("UserId")
-                        .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("Version")
@@ -485,10 +490,7 @@ namespace OrderDbLib.Migrations
                             b1.Property<float>("Distance")
                                 .HasColumnType("real");
 
-                            b1.Property<float>("Price")
-                                .HasColumnType("real");
-
-                            b1.Property<float>("Weight")
+                            b1.Property<float>("Fee")
                                 .HasColumnType("real");
 
                             b1.HasKey("DeliveryOrderId");
@@ -513,6 +515,9 @@ namespace OrderDbLib.Migrations
                             b1.Property<double>("Longitude")
                                 .HasColumnType("float");
 
+                            b1.Property<string>("PlaceId")
+                                .HasColumnType("nvarchar(max)");
+
                             b1.HasKey("DeliveryOrderId");
 
                             b1.ToTable("DeliveryOrders");
@@ -534,6 +539,9 @@ namespace OrderDbLib.Migrations
 
                             b1.Property<double>("Longitude")
                                 .HasColumnType("float");
+
+                            b1.Property<string>("PlaceId")
+                                .HasColumnType("nvarchar(max)");
 
                             b1.HasKey("DeliveryOrderId");
 
@@ -662,9 +670,7 @@ namespace OrderDbLib.Migrations
                 {
                     b.HasOne("OrderDbLib.Entities.User", "User")
                         .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("UserId");
 
                     b.Navigation("User");
                 });

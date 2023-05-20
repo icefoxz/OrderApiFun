@@ -2,6 +2,9 @@
 
 namespace OrderDbLib.Entities
 {
+    /// <summary>
+    /// 用户类, 用于登录, 以及用户的基本信息.
+    /// </summary>
     public class User : IdentityUser, IEntity
     {
         public string? Name { get; set; }
@@ -11,38 +14,35 @@ namespace OrderDbLib.Entities
         public long UpdatedAt { get; set; }
         public long DeletedAt { get; set; }
         public bool IsDeleted { get; set; }
+        /// <summary>
+        /// 余额信息
+        /// </summary>
         public Lingau? Lingau { get; set; }
 
         public User()
         {
             Version = 0;
-            CreatedAt = GetEpochTime();
+            CreatedAt = Entity.GetEpochTime();
             UpdatedAt = CreatedAt;
             DeletedAt = 0;
         }
 
-        public long GetEpochTime()
-        {
-            var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-            return (long)(DateTime.UtcNow - epoch).TotalSeconds;
-        }
-
         public void UpdateFileTimeStamp()
         {
-            UpdatedAt = GetEpochTime();
+            UpdatedAt = Entity.GetEpochTime();
             Version++;
         }
 
         public void DeleteEntity()
         {
             IsDeleted = true;
-            DeletedAt = GetEpochTime();
+            DeletedAt = Entity.GetEpochTime();
         }
 
         public void UnDelete()
         {
             IsDeleted = false;
-            UpdatedAt = GetEpochTime();
+            UpdatedAt = Entity.GetEpochTime();
             UpdateFileTimeStamp();
         }
     }

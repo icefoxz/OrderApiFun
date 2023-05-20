@@ -79,7 +79,7 @@ namespace OrderApiFun.Core.Services
             }
 
             if (order.DeliveryInfo.Distance is default(float)
-                || order.DeliveryInfo.Weight is default(float))
+                || order.ItemInfo.Weight is default(float))
             {
                 isValid = false;
                 message = "Delivery info error!";
