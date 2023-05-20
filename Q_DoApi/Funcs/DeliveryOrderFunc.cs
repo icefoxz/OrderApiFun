@@ -8,6 +8,7 @@ using OrderApiFun.Core.Middlewares;
 using OrderApiFun.Core.Services;
 using OrderDbLib.Entities;
 using OrderHelperLib;
+using OrderHelperLib.Contracts;
 using OrderHelperLib.DtoModels.DeliveryOrders;
 using Utls;
 

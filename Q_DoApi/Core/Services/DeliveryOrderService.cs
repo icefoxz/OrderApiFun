@@ -3,8 +3,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OrderDbLib;
 using OrderDbLib.Entities;
-using OrderHelperLib.DtoModels.DeliveryOrders;
 using Utls;
+using OrderHelperLib.Contracts;
 
 namespace OrderApiFun.Core.Services
 {

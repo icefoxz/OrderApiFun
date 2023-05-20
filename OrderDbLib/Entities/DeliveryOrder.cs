@@ -10,6 +10,10 @@ namespace OrderDbLib.Entities
         public Coordinates? StartCoordinates { get; set; }
         public Coordinates? EndCoordinates { get; set; }
         public string? ReceiverUserId { get; set; }
+        /// <summary>
+        /// 州属
+        /// </summary>
+        public int MyState { get; set; }
         public User? ReceiverUser { get; set; }
         public ReceiverInfo? ReceiverInfo { get; set; }
         public DeliveryInfo? DeliveryInfo { get; set; }
