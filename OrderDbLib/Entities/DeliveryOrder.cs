@@ -4,42 +4,50 @@ namespace OrderDbLib.Entities
     /// <summary>
     /// 运算服务订单
     /// </summary>
-    public class DeliveryOrder : Order
+    public class DeliveryOrder : Entity
     {
+        // 执行用户Id
+        public string UserId { get; set; }
+        // 执行用户
+        public User User { get; set; }
+        // 标签
+        public ICollection<Tag> Tags { get; set; }
         //物品信息
-        public ItemInfo? ItemInfo { get; set; }
-        //起始地点
-        public Coordinates? StartCoordinates { get; set; }
-        //目的地点
-        public Coordinates? EndCoordinates { get; set; }
-        public string? ReceiverUserId { get; set; }
-        
+        public ItemInfo ItemInfo { get; set; }
         // (马来西亚)州属Id
-        public int MyStateId { get; set; }
-        //收件人(如果有账号的话)
-        public User? ReceiverUser { get; set; }
+        public string MyState { get; set; }
+        //寄件人信息
+        public SenderInfo SenderInfo { get; set; }
         //收件人信息
-        public ReceiverInfo? ReceiverInfo { get; set; }
+        public ReceiverInfo ReceiverInfo { get; set; }
         //运送信息
-        public DeliveryInfo? DeliveryInfo { get; set; }
+        public DeliveryInfo DeliveryInfo { get; set; }
         //骑手信息
         public int? RiderId { get; set; }
         public Rider? Rider { get; set; }
         //付款信息
         public PaymentInfo? PaymentInfo { get; set; }
-        //订单状态
+        //订单状态, 正数 = 进行中, 负数 = 已完成
         public int Status { get; set; }
     }
 
     public class PaymentInfo
     {
-        public float Price { get; set; } // 价格
-        public int PaymentMethod { get; set; } // 付款类型
+        /// <summary>
+        /// 运送费
+        /// </summary>
+        public float Fee { get; set; }
+        public float Charge { get; set; } // 价格
+        public int Method { get; set; } // 付款类型
         /// <summary>
         /// 付款Reference,如果骑手代收将会是骑手Id, 如果是在线支付将会是支付平台的Reference, 如果是用户扣账将会是用户Id
         /// </summary>
-        public string? PaymentReference { get; set; } 
-        public bool PaymentReceived { get; set; } // 是否已经完成付款
+        public string? Reference { get; set; }
+        /// <summary>
+        /// 付款TransactionId
+        /// </summary>
+        public int TransactionId { get; set; }
+        public bool IsReceived { get; set; } // 是否已经完成付款
     }
 
     /// <summary>
@@ -55,6 +63,10 @@ namespace OrderDbLib.Entities
         /// 物件数量, 常规来说是一个包裹. 但有时候客户会有多个物件, 这时候就需要填写数量
         /// </summary>
         public int Quantity { get; set; }
+        /// <summary>
+        /// 材积, 长*宽*高/6000
+        /// </summary>
+        public double Volume { get; set; }
         /// <summary>
         /// 长, 单位是米
         /// </summary>
@@ -78,14 +90,26 @@ namespace OrderDbLib.Entities
     /// </summary>
     public class DeliveryInfo
     {
+        //出发地点
+        public Location StartLocation { get; set; }
+        //目的地点
+        public Location EndLocation { get; set; }
         /// <summary>
         /// 距离, 单位是公里
         /// </summary>
         public float Distance { get; set; }
-        /// <summary>
-        /// 运送费
-        /// </summary>
-        public float Fee { get; set; }
+    }
+    /// <summary>
+    /// 发货员信息
+    /// </summary>
+    public class SenderInfo
+    {
+        // 发件人Id(如果有账号的话))
+        public string? UserId { get; set; }
+        public User? User { get; set; }
+        public string Name { get; set; }
+        public string PhoneNumber { get; set; }
+        public string NormalizedPhoneNumber { get; set; }
     }
     /// <summary>
     /// 收货员信息
@@ -104,11 +128,15 @@ namespace OrderDbLib.Entities
         /// 规范手机号
         /// </summary>
         public string NormalizedPhoneNumber { get; set; }
+        // 收件人Id(如果有账号的话))
+        public string? UserId { get; set; }
+        //收件人(如果有账号的话)
+        public User? User { get; set; }
     }
     /// <summary>
-    /// 坐标
+    /// 地点
     /// </summary>
-    public class Coordinates
+    public class Location
     {
         public string? PlaceId { get; set; } // 地点Id
         public string? Address { get; set; } // 地址

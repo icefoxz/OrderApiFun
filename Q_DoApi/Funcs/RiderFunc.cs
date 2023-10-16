@@ -24,12 +24,12 @@ public class RiderFunc
     }
 
     //创建rider
-    [Function(nameof(User_CreateRider))]
-    public async Task<HttpResponseData> User_CreateRider([HttpTrigger(AuthorizationLevel.Function, "post")] 
+    [Function(nameof(User_TransformToRider))]
+    public async Task<HttpResponseData> User_TransformToRider([HttpTrigger(AuthorizationLevel.Function, "post")] 
         HttpRequestData req, 
         FunctionContext context)
     {
-        var log = context.GetLogger(nameof(User_CreateRider));
+        var log = context.GetLogger(nameof(User_TransformToRider));
         // 解析请求主体获取用户ID
         var userId = context.Items[Auth.UserId].ToString();
         var user = await UserManager.FindByIdAsync(userId);

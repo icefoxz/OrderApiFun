@@ -18,6 +18,10 @@ namespace OrderDbLib.Entities
         /// 余额信息
         /// </summary>
         public Lingau? Lingau { get; set; }
+        /// <summary>
+        /// 头像地址
+        /// </summary>
+        public string? AvatarUrl { get; set; }
 
         public User()
         {

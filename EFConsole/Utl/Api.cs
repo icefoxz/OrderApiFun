@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
-using OrderHelperLib.DtoModels.DeliveryOrders;
-using OrderHelperLib.DtoModels.Users;
+using OrderHelperLib.Dtos.DeliveryOrders;
+using OrderHelperLib.Req_Models.Riders;
+using OrderHelperLib.Req_Models.Users;
 
 namespace OrderHelperLib.Utl
 {
@@ -34,7 +35,7 @@ namespace OrderHelperLib.Utl
         public static void Register(string username, string email, string password, Action<string> onSuccessAction,
             Action<string> onFailedAction)
         {
-            var content = new RegisterDto
+            var content = new User_RegDto
             {
                 Username = username,
                 Email = email,
@@ -47,7 +48,7 @@ namespace OrderHelperLib.Utl
         public static void Login(string username, string password, Action<string> onSuccessAction,
             Action<string> onFailedAction)
         {
-            var content = new LoginDto
+            var content = new User_LoginDto
             {
                 Username = username,
                 Password = password
@@ -75,7 +76,7 @@ namespace OrderHelperLib.Utl
         public static void Relogin(string refreshToken, string username, Action<string> onSuccessAction,
             Action<string> onFailedAction)
         {
-            var content = new RefreshTokenDto
+            var content = new User_RefreshTokenDto
             {
                 Username = username
             };
@@ -96,17 +97,17 @@ namespace OrderHelperLib.Utl
             Call(CreateRiderApi, onSuccessAction, onFailedAction);
 
         // CreateDeliveryOrder
-        public static void CreateDeliveryOrder(DeliveryOrderDto orderDto, Action<string> onSuccessAction,
+        public static void CreateDeliveryOrder(DeliverOrderModel orderDto, Action<string> onSuccessAction,
             Action<string> onFailedAction) => Call(CreateDeliveryOrderApi, JsonConvert.SerializeObject(orderDto),
             onSuccessAction, onFailedAction);
 
         // AssignDeliveryMan
-        public static void AssignRider(DeliveryAssignmentDto assignmentDto, Action<string> onSuccessAction,
+        public static void AssignRider(Rider_AssignmentDto assignmentDto, Action<string> onSuccessAction,
             Action<string> onFailedAction) => Call(AssignRiderApi, JsonConvert.SerializeObject(assignmentDto),
             onSuccessAction, onFailedAction);
 
         // UpdateOrderStatus
-        public static void UpdateOrderStatus(DeliverySetStatusDto setStatusDto, Action<string> onSuccessAction,
+        public static void UpdateOrderStatus(Rider_DoStatusUpdateDto setStatusDto, Action<string> onSuccessAction,
             Action<string> onFailedAction) => Call(UpdateOrderStatusApi, JsonConvert.SerializeObject(setStatusDto),
             onSuccessAction, onFailedAction);
     }

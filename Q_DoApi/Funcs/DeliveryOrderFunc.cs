@@ -9,7 +9,9 @@ using OrderApiFun.Core.Services;
 using OrderDbLib.Entities;
 using OrderHelperLib;
 using OrderHelperLib.Contracts;
-using OrderHelperLib.DtoModels.DeliveryOrders;
+using OrderHelperLib.Dtos.DeliveryOrders;
+using OrderHelperLib.Dtos.Lingaus;
+using Q_DoApi.DtoMapping;
 using Utls;
 
 namespace Do_Api.Funcs
@@ -44,10 +46,10 @@ namespace Do_Api.Funcs
             log.LogInformation("C# HTTP trigger function processed a request.");
             var userId = context.Items[Auth.UserId].ToString();
             // Deserialize the request body to DeliveryOrder
-            DeliveryOrderDto? orderDto = null;
+            DeliverOrderModel? orderDto = null;
             try
             {
-                orderDto = bag.Get<DeliveryOrderDto>(0);
+                orderDto = bag.Get<DeliverOrderModel>(0);
             }
             catch (Exception e)
             {
@@ -57,12 +59,27 @@ namespace Do_Api.Funcs
                 return badRequestResponse;
             }
 
+            if (!MyPhone.VerifyPhoneNumber(orderDto.SenderInfo.PhoneNumber))
+            {
+                log.LogWarning("Invalid sender phone number.");
+                var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+                await badRequestResponse.WriteStringAsync("Invalid sender phone number.");
+                return badRequestResponse;
+            }
+
+            if (!MyPhone.VerifyPhoneNumber(orderDto.ReceiverInfo.PhoneNumber))
+            {
+                log.LogWarning("Invalid receiver phone number.");
+                var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
+                await badRequestResponse.WriteStringAsync("Invalid receiver phone number.");
+                return badRequestResponse;
+            }
+
             // Add the new order to the database using the DeliveryOrderService
-            var order = orderDto.Adapt<DeliveryOrder>();
-            var newDo = await DoService.CreateDeliveryOrderAsync(userId, order, log);
+            var newDo = await DoService.CreateDeliveryOrderAsync(userId, orderDto, log);
             var createdResponse = req.CreateResponse(HttpStatusCode.Created);
             //createdResponse.Headers.Add("Location", $"deliveryorder/{newOrder.Id}");
-            await createdResponse.WriteAsJsonAsync(DataBag.Serialize(newDo.Adapt<DeliveryOrderDto>()));
+            await createdResponse.WriteStringAsync(DataBag.Serialize(newDo.Adapt<DeliverOrderModel>()));
             return createdResponse;
         }
 
@@ -95,18 +112,50 @@ namespace Do_Api.Funcs
             }
 
             // Retrieve paginated DeliveryOrders for the user from the database using the DeliveryOrderService
-            var deliveryOrders = await DoService.GetDeliveryOrdersAsync(userId, limit, page, log);
-
-            // Check if there are any DeliveryOrders for the user
-            if (deliveryOrders == null || !deliveryOrders.Any())
-            {
-                var notFoundResponse = req.CreateResponse(HttpStatusCode.NotFound);
-                await notFoundResponse.WriteStringAsync("No DeliveryOrders found for the user.");
-                return notFoundResponse;
-            }
+            var deliveryOrders = await DoService.User_GetDeliveryOrdersAsync(userId, limit, page, log);
 
             // Convert the DeliveryOrders to a list of DeliveryOrderDto objects
-            var deliveryOrdersDto = deliveryOrders.Select(order => order.Adapt<DeliveryOrderDto>()).ToList();
+            var deliveryOrdersDto = deliveryOrders.Select(order => order.Adapt<DeliverOrderModel>(EntityMapper.Config)).ToList();
+
+            // Create an HTTP 200 (OK) response and write the DeliveryOrderDto objects as JSON
+            var okResponse = req.CreateResponse(HttpStatusCode.OK);
+            await okResponse.WriteStringAsync(DataBag.SerializeWithName(nameof(deliveryOrdersDto.GetType), deliveryOrdersDto));
+            return okResponse;
+        }
+        
+        [Function(nameof(Rider_GetAllDeliveryOrders))]
+        public async Task<HttpResponseData> Rider_GetAllDeliveryOrders(
+            [HttpTrigger(AuthorizationLevel.Function, "post")]
+            HttpRequestData req,
+            FunctionContext context)
+        {
+            var log = context.GetLogger(nameof(Rider_GetAllDeliveryOrders));
+            log.LogInformation("C# HTTP trigger function processed a request.");
+
+            var riderId = GetRiderId(context);
+
+            // Retrieve DataBag from request
+            var bag = await req.GetBagAsync();
+
+            // Get the 'limit' and 'page' values from the DataBag
+            var limit = 10;
+            var page = 0;
+
+            try
+            {
+                limit = bag.Get<int>(0);
+                page = bag.Get<int>(1);
+            }
+            catch (Exception _)
+            {
+                // ignored
+            }
+
+            // Retrieve paginated DeliveryOrders for the user from the database using the DeliveryOrderService
+            var deliveryOrders = await DoService.Rider_GetDeliveryOrdersAsync(riderId, limit, page, log);
+
+            // Convert the DeliveryOrders to a list of DeliveryOrderDto objects
+            var deliveryOrdersDto = deliveryOrders.Select(order => order.Adapt<DeliverOrderModel>()).ToList();
 
             // Create an HTTP 200 (OK) response and write the DeliveryOrderDto objects as JSON
             var okResponse = req.CreateResponse(HttpStatusCode.OK);
@@ -130,7 +179,7 @@ namespace Do_Api.Funcs
             {
                 var bag = await req.GetBagAsync();
                 var deliveryOrderId = bag.Get<int>(0);
-                order = await DoService.GetDeliveryOrderAsync(userId, deliveryOrderId);
+                order = await DoService.User_GetDeliveryOrderAsync(userId, deliveryOrderId);
             }
             catch (Exception e)
             {
@@ -141,7 +190,7 @@ namespace Do_Api.Funcs
             }
 
             var userLingau = await LingauManager.GetLingauAsync(userId);
-            if (order.PaymentInfo.Price > userLingau.Credit)
+            if (order.PaymentInfo.Charge > userLingau.Credit)
             {
                 var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
                 await badRequestResponse.WriteStringAsync("Not enough Lingau.");
@@ -151,7 +200,7 @@ namespace Do_Api.Funcs
             await DoService.PayDeliveryOrderByLingauAsync(userId, order, log);
 
             var response = req.CreateResponse(HttpStatusCode.OK);
-            await response.WriteStringAsync(DataBag.Serialize(userLingau.Adapt<LingauDto>()));
+            await response.WriteStringAsync(DataBag.Serialize(userLingau.Adapt<LingauModel>()));
             return response;
         }
 
@@ -179,10 +228,10 @@ namespace Do_Api.Funcs
                 }
 
                 //assign deliveryMan
-                await DoService.AssignRiderAsync(orderId, deliveryManId);
+                var order = await DoService.AssignRiderAsync(orderId, deliveryManId);
 
                 var response = req.CreateResponse(HttpStatusCode.OK);
-                await response.WriteStringAsync("Delivery man assigned successfully.");
+                await response.WriteStringAsync(DataBag.Serialize(order.Adapt<DeliverOrderModel>()));
                 return response;
             }
             catch (Exception ex)
@@ -204,42 +253,28 @@ namespace Do_Api.Funcs
 
         [Function(nameof(Rider_UpdateOrderStatus))]
         public async Task<HttpResponseData> Rider_UpdateOrderStatus(
-            [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req, 
+            [HttpTrigger(AuthorizationLevel.Function, "post")]
+            HttpRequestData req,
             FunctionContext context)
         {
             var log = context.GetLogger(nameof(Rider_UpdateOrderStatus));
             log.LogInformation("C# HTTP trigger function processed a request.");
             var deliveryManId = GetRiderId(context);
-            DeliverySetStatusDto? dto;
-            try
-            {
-                dto = await req.ReadFromJsonAsync<DeliverySetStatusDto>();
-
-                if (dto == null || dto.DeliveryOrderId <= 0)
-                {
-                    var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                    await errorResponse.WriteStringAsync("Invalid request payload.");
-                    return errorResponse;
-                }
-            }
-            catch (Exception ex)
-            {
-                log.LogError(ex, "Error parsing request payload.");
-
-                var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                await errorResponse.WriteStringAsync("Invalid request payload.");
-                return errorResponse;
-            }
-
             var message = string.Empty;
+            var bag = await req.GetBagAsync() ?? throw new NullReferenceException("Invalid databag format");
+            var riderId = GetRiderId(context);
+            var orderId = bag.Get<int>(0);
+            var status = bag.Get<int>(1);
             try
             {
-                var status = (DeliveryOrderStatus)dto.Status;
-                message = $"Order[{dto.DeliveryOrderId}].Update({status})";
-                // Assuming you have a static instance of the DeliveryOrderService
-                await DoService.UpdateOrderStatusByRiderAsync(deliveryManId, dto.DeliveryOrderId, status);
+                var deliveryOrder = await DoService.Rider_GetDeliveryOrderAsync(riderId, orderId, log) ??
+                                    throw new NullReferenceException($"Order[{orderId}] not found!");
+                deliveryOrder.Status = status;
+                message = $"Order[{deliveryOrder.Id}].Update({status})";
+
+                await DoService.UpdateOrderStatusByRiderAsync(deliveryManId, orderId, (DeliveryOrderStatus)status);
                 var response = req.CreateResponse(HttpStatusCode.OK);
-                await response.WriteStringAsync(DataBag.Serialize(message));
+                await response.WriteStringAsync(DataBag.Serialize(deliveryOrder.Adapt<DeliverOrderModel>()));
                 return response;
             }
             catch (Exception ex)
@@ -248,7 +283,7 @@ namespace Do_Api.Funcs
                 log.LogError(ex, message);
 
                 var errorResponse = req.CreateResponse(HttpStatusCode.InternalServerError);
-                await errorResponse.WriteStringAsync($"Error setting order status to {dto.Status}.");
+                await errorResponse.WriteStringAsync($"Error setting order status to {status}.");
                 return errorResponse;
             }
         }

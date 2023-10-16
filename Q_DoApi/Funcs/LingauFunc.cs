@@ -5,8 +5,9 @@ using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using OrderApiFun.Core.Middlewares;
 using OrderApiFun.Core.Services;
-using OrderHelperLib.DtoModels.DeliveryOrders;
 using OrderHelperLib;
+using OrderHelperLib.Dtos.DeliveryOrders;
+using OrderHelperLib.Dtos.Lingaus;
 using Utls;
 
 namespace Do_Api.Funcs;
@@ -35,7 +36,7 @@ public class LingauFunc
         var lingau = await LingauManager.GetLingauAsync(userId);
 
         var response = req.CreateResponse(HttpStatusCode.OK);
-        await response.WriteStringAsync(DataBag.Serialize(lingau.Adapt<LingauDto>()));
+        await response.WriteStringAsync(DataBag.Serialize(lingau.Adapt<LingauModel>()));
         return response;
     }
 }

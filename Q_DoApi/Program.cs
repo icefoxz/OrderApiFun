@@ -1,6 +1,9 @@
+using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Azure;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
@@ -8,6 +11,7 @@ using OrderApiFun.Core.Middlewares;
 using OrderApiFun.Core.Services;
 using OrderDbLib;
 using OrderDbLib.Entities;
+using Q_DoApi.Core.Services;
 
 
 var host = new HostBuilder()
@@ -15,10 +19,11 @@ var host = new HostBuilder()
     {
         app.UseMiddleware<AuthorityMiddleware>();
     })
-    .ConfigureServices(s =>
+    .ConfigureServices((b,s) =>
     {
+        var c = b.Configuration;
         // 配置数据库连接字符串
-        var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings:DefaultConnection");
+        var connectionString = c.GetConnectionString("DefaultConnection");
         // 添加 ApplicationDbContext 服务
         s.AddDbContext<OrderDbContext>(
             op =>
@@ -28,7 +33,6 @@ var host = new HostBuilder()
 
         //Middleware
         //s.AddHttpContextAccessor();//Middleware support MUST!
-
         // 添加 Identity 服务
         s.AddIdentityCore<User>(o =>
         {
@@ -59,6 +63,14 @@ var host = new HostBuilder()
         s.AddScoped<DeliveryOrderService>();
         s.AddScoped<RiderManager>();
         s.AddScoped<LingauManager>();
+
+        //Blob Storage
+        var blobConnectionString = c.GetConnectionString("BlobStorage");
+        var containerName = c["BlobContainerName"];
+        var blobServiceClient = new BlobServiceClient(blobConnectionString);
+        var blobService = new BlobService(blobServiceClient, containerName);
+        s.AddSingleton(blobServiceClient);
+        s.AddSingleton(blobService);
     })
     .Build();
 

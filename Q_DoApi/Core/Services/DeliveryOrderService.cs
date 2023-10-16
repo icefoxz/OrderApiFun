@@ -1,10 +1,13 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Mapster;
+using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OrderDbLib;
 using OrderDbLib.Entities;
 using Utls;
 using OrderHelperLib.Contracts;
+using OrderHelperLib.Dtos.DeliveryOrders;
+using Q_DoApi.DtoMapping;
 
 namespace OrderApiFun.Core.Services
 {
@@ -22,23 +25,33 @@ namespace OrderApiFun.Core.Services
             LingauManager = lingauManager;
         }
 
-        public async Task<DeliveryOrder> CreateDeliveryOrderAsync(string? userId, DeliveryOrder newOrder, ILogger log)
+        public async Task<DeliveryOrder> CreateDeliveryOrderAsync(string userId, DeliverOrderModel dto, ILogger log)
         {
             var user = await UserManager.FindByIdAsync(userId);
             if (user == null) throw new NullReferenceException("user is null!");
+            var newOrder = dto.Adapt<DeliveryOrder>(EntityMapper.Config);
+
             newOrder.User = user;
             newOrder.UserId = userId;
-            var receiver = await UserManager.FindByIdAsync(newOrder.ReceiverUserId);
+            newOrder.SenderInfo = new SenderInfo
+            {
+                User = user,
+                UserId = userId,
+                Name = dto.SenderInfo.Name,
+                PhoneNumber = dto.SenderInfo.PhoneNumber,
+                NormalizedPhoneNumber = MyPhone.NormalizePhoneNumber(dto.SenderInfo.PhoneNumber),
+            };
+            var receiver = await UserManager.FindByIdAsync(newOrder.ReceiverInfo.UserId);
             if (receiver != null)
             {
                 newOrder.ReceiverInfo = CreateOrderReceiverInfo(receiver.Name, receiver.PhoneNumber);
-                newOrder.ReceiverUserId = receiver.Id;
-                newOrder.ReceiverUser = receiver;
+                newOrder.ReceiverInfo.User = receiver;
+                newOrder.ReceiverInfo.UserId = userId;
             }
             else
             {
                 newOrder.ReceiverInfo =
-                    CreateOrderReceiverInfo(newOrder.ReceiverInfo.Name, newOrder.ReceiverInfo.PhoneNumber);
+                    CreateOrderReceiverInfo(dto.ReceiverInfo.Name, dto.ReceiverInfo.PhoneNumber);
             }
 
             Db.DeliveryOrders.Add(newOrder);
@@ -64,8 +77,8 @@ namespace OrderApiFun.Core.Services
             var message = string.Empty;
             // Add validation logic as needed
 
-            if (order.StartCoordinates == null
-                || order.EndCoordinates == null)
+            if (order.DeliveryInfo.StartLocation == null
+                || order.DeliveryInfo.EndLocation == null)
             {
                 isValid = false;
                 message = "Coordinates error!";
@@ -117,13 +130,13 @@ namespace OrderApiFun.Core.Services
             {
                 return currentStatus switch
                 {
-                    DeliveryOrderStatus.Created => status == DeliveryOrderStatus.Accepted,
-                    DeliveryOrderStatus.Accepted => status == DeliveryOrderStatus.InProgress,
-                    DeliveryOrderStatus.InProgress => status is DeliveryOrderStatus.Delivered or DeliveryOrderStatus.Exception,
-                    DeliveryOrderStatus.Delivered => false, // 无法更改已送达订单的状态
+                    DeliveryOrderStatus.Created => status == DeliveryOrderStatus.Assigned,
+                    DeliveryOrderStatus.Assigned => status == DeliveryOrderStatus.Delivering,
+                    DeliveryOrderStatus.Delivering => status is DeliveryOrderStatus.Completed or DeliveryOrderStatus.Exception,
+                    DeliveryOrderStatus.Completed => false, // 无法更改已送达订单的状态
                     DeliveryOrderStatus.Exception => false, // 无法更改异常订单的状态
                     DeliveryOrderStatus.Canceled => false, // 无法更改取消订单的状态
-                    DeliveryOrderStatus.Closed => false, // 无法更改关闭订单的状态
+                    DeliveryOrderStatus.Close => false, // 无法更改结算订单的状态
                     _ => throw new ArgumentOutOfRangeException(nameof(currentStatus))
                 };
             }
@@ -152,34 +165,31 @@ namespace OrderApiFun.Core.Services
             await UpdateOrderStatusAsync(orderId, newStatus);
             return order;
 
-            bool IsValidStatusTransition(DeliveryOrderStatus currentStatus, DeliveryOrderStatus status)
-            {
-                return currentStatus switch
+            bool IsValidStatusTransition(DeliveryOrderStatus currentStatus, DeliveryOrderStatus status) =>
+                currentStatus switch
                 {
                     DeliveryOrderStatus.Created => status == DeliveryOrderStatus.Canceled,
-                    DeliveryOrderStatus.Accepted => false, // 无法更改承接订单的状态
-                    DeliveryOrderStatus.InProgress => false, // 无法更改运送中订单的状态
-                    DeliveryOrderStatus.Delivered => status == DeliveryOrderStatus.Exception,
+                    DeliveryOrderStatus.Assigned => false, // 无法更改承接订单的状态
+                    DeliveryOrderStatus.Delivering => false, // 无法更改运送中订单的状态
+                    DeliveryOrderStatus.Completed => status == DeliveryOrderStatus.Exception,
                     DeliveryOrderStatus.Exception => false, // 无法更改异常订单的状态
                     DeliveryOrderStatus.Canceled => false, // 无法更改取消订单的状态
-                    DeliveryOrderStatus.Closed => false, // 无法更改关闭订单的状态
+                    DeliveryOrderStatus.Close => false, // 无法更改结算订单的状态
                     _ => throw new ArgumentOutOfRangeException(nameof(currentStatus))
                 };
-            }
-
         }
 
         private async Task<DeliveryOrder?> FindByIdAsync(int orderId) =>
             await Db.DeliveryOrders.FirstOrDefaultAsync(o => !o.IsDeleted && o.Id == orderId);
 
         /// <summary>
-        /// 分配工作给DeliveryMan, 状态 = <see cref="DeliveryOrderStatus.Accepted"/>
+        /// 分配工作给DeliveryMan, 状态 = <see cref="DeliveryOrderStatus.Assigned"/>
         /// </summary>
         /// <param name="deliveryOrderId"></param>
         /// <param name="deliveryManId"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentException"></exception>
-        public async Task AssignRiderAsync(int deliveryOrderId, int deliveryManId)
+        public async Task<DeliveryOrder> AssignRiderAsync(int deliveryOrderId, int deliveryManId)
         {
             var deliveryOrder = await Db.DeliveryOrders.FindAsync(deliveryOrderId);
             var deliveryMan = await RiderManager.FindByIdAsync(deliveryManId);
@@ -189,9 +199,10 @@ namespace OrderApiFun.Core.Services
                 throw new ArgumentException("Delivery order not found.");
             deliveryOrder.RiderId = deliveryMan.Id;
             deliveryOrder.Rider = deliveryMan;
-            deliveryOrder.Status = (int)DeliveryOrderStatus.Accepted;
+            deliveryOrder.Status = (int)DeliveryOrderStatus.Assigned;
             deliveryOrder.UpdateFileTimeStamp();
             await Db.SaveChangesAsync();
+            return deliveryOrder;
         }
 
         /// <summary>
@@ -214,13 +225,14 @@ namespace OrderApiFun.Core.Services
             await Db.SaveChangesAsync();
         }
 
-        public async Task<DeliveryOrder[]> GetDeliveryOrdersAsync(string? userId, int limit, int page, ILogger log)
+        public async Task<DeliveryOrder[]> User_GetDeliveryOrdersAsync(string? userId, int limit, int page, ILogger log)
         {
             log.LogInformation($"GetDeliveryOrders: userId={userId}, limit={limit}, page={page}");
             page = Math.Max(1, page);
             return await Db.DeliveryOrders
                 .Include(d=>d.Rider)
-                .Include(d=>d.ReceiverUser)
+                .Include(d=>d.ReceiverInfo.User)
+                .Include(d=>d.SenderInfo.User)
                 .Include(d=>d.User)
                 .ThenInclude(u=>u.Lingau)
                 .Where(o => o.UserId == userId && !o.IsDeleted)
@@ -228,9 +240,33 @@ namespace OrderApiFun.Core.Services
                 .Skip(limit * (page - 1))
                 .Take(limit)
                 .ToArrayAsync();
+        }        
+        
+        public async Task<DeliveryOrder[]> Rider_GetDeliveryOrdersAsync(int? riderId, int limit, int page, ILogger log)
+        {
+            log.LogInformation($"GetDeliveryOrders: userId={riderId}, limit={limit}, page={page}");
+            page = Math.Max(1, page);
+            return await Db.DeliveryOrders
+                .Include(d=>d.Rider)
+                .Include(d=>d.ReceiverInfo.User)
+                .Include(d=>d.SenderInfo.User)
+                .Include(d=>d.User)
+                .ThenInclude(u=>u.Lingau)
+                .Where(o => (o.RiderId == riderId || o.RiderId == default) && !o.IsDeleted)
+                .OrderByDescending(o => o.CreatedAt)
+                .Skip(limit * (page - 1))
+                .Take(limit)
+                .ToArrayAsync();
         }
 
-        public async Task<DeliveryOrder?> GetDeliveryOrderAsync(string? userId, int deliveryOrderId)
+        public async Task<DeliveryOrder?> Rider_GetDeliveryOrderAsync(int? riderId, int orderId, ILogger log)
+        {
+            log.LogInformation($"GetDeliveryOrders: userId={riderId}, orderId={orderId}");
+            return await Db.DeliveryOrders.FirstOrDefaultAsync(o =>
+                o.Id == orderId && o.RiderId == riderId && !o.IsDeleted);
+        }
+
+        public async Task<DeliveryOrder?> User_GetDeliveryOrderAsync(string? userId, int deliveryOrderId)
         {
             return await Db.DeliveryOrders
                 .Include(d => d.User)
@@ -245,7 +281,7 @@ namespace OrderApiFun.Core.Services
             if (user == null)
                 throw new InvalidOperationException("User not found");
             var lingau = await LingauManager.GetLingauAsync(userId);
-            var price = order.PaymentInfo.Price;
+            var price = order.PaymentInfo.Charge;
             if (price < 0) throw new InvalidOperationException($"Invalid price: {price} from order.{order.Id}");
             if (lingau.Credit < price)
             {

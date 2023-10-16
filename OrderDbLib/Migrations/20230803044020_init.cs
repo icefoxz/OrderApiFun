@@ -202,27 +202,30 @@ namespace OrderDbLib.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    ItemInfo_Weight = table.Column<float>(type: "real", nullable: true),
-                    ItemInfo_Quantity = table.Column<int>(type: "int", nullable: true),
-                    ItemInfo_Length = table.Column<float>(type: "real", nullable: true),
-                    ItemInfo_Width = table.Column<float>(type: "real", nullable: true),
-                    ItemInfo_Height = table.Column<float>(type: "real", nullable: true),
+                    ItemInfo_Weight = table.Column<float>(type: "real", nullable: false),
+                    ItemInfo_Quantity = table.Column<int>(type: "int", nullable: false),
+                    ItemInfo_Volume = table.Column<int>(type: "int", nullable: false),
+                    ItemInfo_Length = table.Column<float>(type: "real", nullable: false),
+                    ItemInfo_Width = table.Column<float>(type: "real", nullable: false),
+                    ItemInfo_Height = table.Column<float>(type: "real", nullable: false),
                     ItemInfo_Remark = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    StartCoordinates_PlaceId = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    StartCoordinates_Address = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    StartCoordinates_Latitude = table.Column<double>(type: "float", nullable: true),
-                    StartCoordinates_Longitude = table.Column<double>(type: "float", nullable: true),
-                    EndCoordinates_PlaceId = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    EndCoordinates_Address = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    EndCoordinates_Latitude = table.Column<double>(type: "float", nullable: true),
-                    EndCoordinates_Longitude = table.Column<double>(type: "float", nullable: true),
-                    ReceiverUserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
-                    MyStateId = table.Column<int>(type: "int", nullable: false),
-                    ReceiverInfo_Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ReceiverInfo_PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ReceiverInfo_NormalizedPhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DeliveryInfo_Distance = table.Column<float>(type: "real", nullable: true),
-                    DeliveryInfo_Fee = table.Column<float>(type: "real", nullable: true),
+                    MyState = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SenderInfo_SenderUserId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SenderInfo_UserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    ReceiverInfo_Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ReceiverInfo_PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ReceiverInfo_NormalizedPhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ReceiverInfo_UserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    DeliveryInfo_StartLocation_PlaceId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DeliveryInfo_StartLocation_Address = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DeliveryInfo_StartLocation_Latitude = table.Column<double>(type: "float", nullable: false),
+                    DeliveryInfo_StartLocation_Longitude = table.Column<double>(type: "float", nullable: false),
+                    DeliveryInfo_EndLocation_PlaceId = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DeliveryInfo_EndLocation_Address = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DeliveryInfo_EndLocation_Latitude = table.Column<double>(type: "float", nullable: false),
+                    DeliveryInfo_EndLocation_Longitude = table.Column<double>(type: "float", nullable: false),
+                    DeliveryInfo_Distance = table.Column<float>(type: "real", nullable: false),
+                    DeliveryInfo_Fee = table.Column<float>(type: "real", nullable: false),
                     RiderId = table.Column<int>(type: "int", nullable: true),
                     PaymentInfo_Price = table.Column<float>(type: "real", nullable: true),
                     PaymentInfo_PaymentMethod = table.Column<int>(type: "int", nullable: true),
@@ -240,11 +243,15 @@ namespace OrderDbLib.Migrations
                 {
                     table.PrimaryKey("PK_DeliveryOrders", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_DeliveryOrders_AspNetUsers_ReceiverUserId",
-                        column: x => x.ReceiverUserId,
+                        name: "FK_DeliveryOrders_AspNetUsers_ReceiverInfo_UserId",
+                        column: x => x.ReceiverInfo_UserId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_DeliveryOrders_AspNetUsers_SenderInfo_UserId",
+                        column: x => x.SenderInfo_UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_DeliveryOrders_AspNetUsers_UserId",
                         column: x => x.UserId,
@@ -328,14 +335,19 @@ namespace OrderDbLib.Migrations
                 filter: "[NormalizedUserName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_DeliveryOrders_ReceiverUserId",
+                name: "IX_DeliveryOrders_ReceiverInfo_UserId",
                 table: "DeliveryOrders",
-                column: "ReceiverUserId");
+                column: "ReceiverInfo_UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_DeliveryOrders_RiderId",
                 table: "DeliveryOrders",
                 column: "RiderId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DeliveryOrders_SenderInfo_UserId",
+                table: "DeliveryOrders",
+                column: "SenderInfo_UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_DeliveryOrders_UserId",

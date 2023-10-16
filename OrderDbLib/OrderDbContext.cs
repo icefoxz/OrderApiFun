@@ -9,6 +9,8 @@ namespace OrderDbLib
         public DbSet<DeliveryOrder> DeliveryOrders { get; set; }
         public DbSet<Rider> Riders { get; set; }
         public DbSet<Lingau> Lingaus { get; set; }
+        public DbSet<Report> Reports { get; set; }
+        public DbSet<Tag> Tags { get; set; }
 
         public OrderDbContext(DbContextOptions op):base(op) { }
 
@@ -19,16 +21,14 @@ namespace OrderDbLib
                 .WithMany()
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
-            b.Entity<DeliveryOrder>().HasOne(d => d.ReceiverUser)
-                .WithMany()
-                .HasForeignKey(d => d.ReceiverUserId)
-                .IsRequired(false)
-                .OnDelete(DeleteBehavior.Restrict);
             b.Entity<DeliveryOrder>().OwnsOne(d => d.ItemInfo);
             b.Entity<DeliveryOrder>().OwnsOne(d => d.ReceiverInfo);
-            b.Entity<DeliveryOrder>().OwnsOne(d => d.DeliveryInfo);
-            b.Entity<DeliveryOrder>().OwnsOne(d => d.StartCoordinates);
-            b.Entity<DeliveryOrder>().OwnsOne(d => d.EndCoordinates);
+            b.Entity<DeliveryOrder>().OwnsOne(d => d.SenderInfo);
+            b.Entity<DeliveryOrder>().OwnsOne(d => d.DeliveryInfo, i =>
+            {
+                i.OwnsOne(o => o.StartLocation);
+                i.OwnsOne(o => o.EndLocation);
+            });
             b.Entity<DeliveryOrder>().OwnsOne(d => d.PaymentInfo);
             b.Entity<User>().HasOne<Lingau>()
                 .WithOne()
@@ -37,6 +37,7 @@ namespace OrderDbLib
             b.Entity<Lingau>()
                 .Property(l => l.Id)
                 .HasDefaultValueSql("NEWID()");
+            b.Entity<Report>().OwnsOne(r => r.Resolve);
             base.OnModelCreating(b);
         }
     }

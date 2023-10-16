@@ -12,7 +12,7 @@ using OrderDbLib;
 namespace OrderDbLib.Migrations
 {
     [DbContext(typeof(OrderDbContext))]
-    [Migration("20230520032352_init")]
+    [Migration("20230803044020_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -175,11 +175,9 @@ namespace OrderDbLib.Migrations
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<int>("MyStateId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ReceiverUserId")
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<string>("MyState")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("RiderId")
                         .HasColumnType("int");
@@ -198,8 +196,6 @@ namespace OrderDbLib.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ReceiverUserId");
 
                     b.HasIndex("RiderId");
 
@@ -470,11 +466,6 @@ namespace OrderDbLib.Migrations
 
             modelBuilder.Entity("OrderDbLib.Entities.DeliveryOrder", b =>
                 {
-                    b.HasOne("OrderDbLib.Entities.User", "ReceiverUser")
-                        .WithMany()
-                        .HasForeignKey("ReceiverUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("OrderDbLib.Entities.Rider", "Rider")
                         .WithMany()
                         .HasForeignKey("RiderId");
@@ -502,56 +493,62 @@ namespace OrderDbLib.Migrations
 
                             b1.WithOwner()
                                 .HasForeignKey("DeliveryOrderId");
-                        });
 
-                    b.OwnsOne("OrderDbLib.Entities.Coordinates", "EndCoordinates", b1 =>
-                        {
-                            b1.Property<int>("DeliveryOrderId")
-                                .HasColumnType("int");
+                            b1.OwnsOne("OrderDbLib.Entities.Location", "EndLocation", b2 =>
+                                {
+                                    b2.Property<int>("DeliveryInfoDeliveryOrderId")
+                                        .HasColumnType("int");
 
-                            b1.Property<string>("Address")
-                                .HasColumnType("nvarchar(max)");
+                                    b2.Property<string>("Address")
+                                        .HasColumnType("nvarchar(max)");
 
-                            b1.Property<double>("Latitude")
-                                .HasColumnType("float");
+                                    b2.Property<double>("Latitude")
+                                        .HasColumnType("float");
 
-                            b1.Property<double>("Longitude")
-                                .HasColumnType("float");
+                                    b2.Property<double>("Longitude")
+                                        .HasColumnType("float");
 
-                            b1.Property<string>("PlaceId")
-                                .HasColumnType("nvarchar(max)");
+                                    b2.Property<string>("PlaceId")
+                                        .HasColumnType("nvarchar(max)");
 
-                            b1.HasKey("DeliveryOrderId");
+                                    b2.HasKey("DeliveryInfoDeliveryOrderId");
 
-                            b1.ToTable("DeliveryOrders");
+                                    b2.ToTable("DeliveryOrders");
 
-                            b1.WithOwner()
-                                .HasForeignKey("DeliveryOrderId");
-                        });
+                                    b2.WithOwner()
+                                        .HasForeignKey("DeliveryInfoDeliveryOrderId");
+                                });
 
-                    b.OwnsOne("OrderDbLib.Entities.Coordinates", "StartCoordinates", b1 =>
-                        {
-                            b1.Property<int>("DeliveryOrderId")
-                                .HasColumnType("int");
+                            b1.OwnsOne("OrderDbLib.Entities.Location", "StartLocation", b2 =>
+                                {
+                                    b2.Property<int>("DeliveryInfoDeliveryOrderId")
+                                        .HasColumnType("int");
 
-                            b1.Property<string>("Address")
-                                .HasColumnType("nvarchar(max)");
+                                    b2.Property<string>("Address")
+                                        .HasColumnType("nvarchar(max)");
 
-                            b1.Property<double>("Latitude")
-                                .HasColumnType("float");
+                                    b2.Property<double>("Latitude")
+                                        .HasColumnType("float");
 
-                            b1.Property<double>("Longitude")
-                                .HasColumnType("float");
+                                    b2.Property<double>("Longitude")
+                                        .HasColumnType("float");
 
-                            b1.Property<string>("PlaceId")
-                                .HasColumnType("nvarchar(max)");
+                                    b2.Property<string>("PlaceId")
+                                        .HasColumnType("nvarchar(max)");
 
-                            b1.HasKey("DeliveryOrderId");
+                                    b2.HasKey("DeliveryInfoDeliveryOrderId");
 
-                            b1.ToTable("DeliveryOrders");
+                                    b2.ToTable("DeliveryOrders");
 
-                            b1.WithOwner()
-                                .HasForeignKey("DeliveryOrderId");
+                                    b2.WithOwner()
+                                        .HasForeignKey("DeliveryInfoDeliveryOrderId");
+                                });
+
+                            b1.Navigation("EndLocation")
+                                .IsRequired();
+
+                            b1.Navigation("StartLocation")
+                                .IsRequired();
                         });
 
                     b.OwnsOne("OrderDbLib.Entities.ItemInfo", "ItemInfo", b1 =>
@@ -570,6 +567,9 @@ namespace OrderDbLib.Migrations
 
                             b1.Property<string>("Remark")
                                 .HasColumnType("nvarchar(max)");
+
+                            b1.Property<int>("Volume")
+                                .HasColumnType("int");
 
                             b1.Property<float>("Weight")
                                 .HasColumnType("real");
@@ -627,29 +627,67 @@ namespace OrderDbLib.Migrations
                                 .IsRequired()
                                 .HasColumnType("nvarchar(max)");
 
+                            b1.Property<string>("UserId")
+                                .HasColumnType("nvarchar(450)");
+
                             b1.HasKey("DeliveryOrderId");
+
+                            b1.HasIndex("UserId");
 
                             b1.ToTable("DeliveryOrders");
 
                             b1.WithOwner()
                                 .HasForeignKey("DeliveryOrderId");
+
+                            b1.HasOne("OrderDbLib.Entities.User", "User")
+                                .WithMany()
+                                .HasForeignKey("UserId");
+
+                            b1.Navigation("User");
                         });
 
-                    b.Navigation("DeliveryInfo");
+                    b.OwnsOne("OrderDbLib.Entities.SenderInfo", "SenderInfo", b1 =>
+                        {
+                            b1.Property<int>("DeliveryOrderId")
+                                .HasColumnType("int");
 
-                    b.Navigation("EndCoordinates");
+                            b1.Property<string>("SenderUserId")
+                                .HasColumnType("nvarchar(max)");
 
-                    b.Navigation("ItemInfo");
+                            b1.Property<string>("UserId")
+                                .HasColumnType("nvarchar(450)");
+
+                            b1.HasKey("DeliveryOrderId");
+
+                            b1.HasIndex("UserId");
+
+                            b1.ToTable("DeliveryOrders");
+
+                            b1.WithOwner()
+                                .HasForeignKey("DeliveryOrderId");
+
+                            b1.HasOne("OrderDbLib.Entities.User", "User")
+                                .WithMany()
+                                .HasForeignKey("UserId");
+
+                            b1.Navigation("User");
+                        });
+
+                    b.Navigation("DeliveryInfo")
+                        .IsRequired();
+
+                    b.Navigation("ItemInfo")
+                        .IsRequired();
 
                     b.Navigation("PaymentInfo");
 
-                    b.Navigation("ReceiverInfo");
-
-                    b.Navigation("ReceiverUser");
+                    b.Navigation("ReceiverInfo")
+                        .IsRequired();
 
                     b.Navigation("Rider");
 
-                    b.Navigation("StartCoordinates");
+                    b.Navigation("SenderInfo")
+                        .IsRequired();
 
                     b.Navigation("User");
                 });

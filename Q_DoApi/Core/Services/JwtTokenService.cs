@@ -40,14 +40,15 @@ public class JwtTokenService
         }
     }
 
-    public string GenerateRefreshToken(User user)
+    public string GenerateRefreshToken(User user, params Claim[] addOnClaims)
     {
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(ClaimTypes.Name, user.UserName),//Refresh Token记录的是Username
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new Claim(TokenType, RefreshTokenHeader),
         };
+        claims.AddRange(addOnClaims);
         var refreshToken = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
