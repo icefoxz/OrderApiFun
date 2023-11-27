@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text;
 using Azure.Identity;
 using Microsoft.IdentityModel.Tokens;
+using OrderApiFun.Core.Middlewares;
 using OrderApiFun.Core.Tokens;
 using OrderDbLib.Entities;
 
@@ -10,7 +11,7 @@ namespace OrderApiFun.Core.Services;
 
 public class JwtTokenService
 {
-    private const string JwtKey = "www.icefoxz.com/OrderWebService";
+    private const string JwtKey = "https://www.icefoxz.com/DoManageWebApp";
     private const string JwtIssuer = "www.icefoxz.com";
     private const string JwtAudience = "icefoxzApp";
     public const string ProviderName = "Jwt";
@@ -40,7 +41,12 @@ public class JwtTokenService
         }
     }
 
-    public string GenerateRefreshToken(User user, params Claim[] addOnClaims)
+    public string GenerateUserRefreshToken(User user) => GenerateRefreshToken(user);
+
+    public string GenerateRiderRefreshToken(User rider, long riderId) =>
+        GenerateRefreshToken(rider, new Claim(Auth.RiderId, riderId.ToString()));
+
+    private string GenerateRefreshToken(User user, params Claim[] addOnClaims)
     {
         var claims = new List<Claim>
         {
@@ -79,7 +85,15 @@ public class JwtTokenService
         }
     }
 
-    public string GenerateAccessToken(User user, params Claim[] additionalClaims)
+    public string GenerateUserAccessToken(User user) =>
+        GenerateAccessToken(user, new Claim(ClaimTypes.Role, Auth.Role_User));
+
+    public string GenerateRiderAccessToken(User user, Rider rider) =>
+        GenerateAccessToken(user, 
+            new Claim(Auth.RiderId, rider.Id.ToString()),
+            new Claim(ClaimTypes.Role, Auth.Role_Rider));
+
+    private string GenerateAccessToken(User user, params Claim[] additionalClaims)
     {
         var claims = new List<Claim>
         {

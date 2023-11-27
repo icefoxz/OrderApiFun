@@ -1,9 +1,7 @@
 using System.Net;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
-using Microsoft.Extensions.Logging;
 using OrderApiFun.Core.Middlewares;
 using OrderApiFun.Core.Services;
 using OrderDbLib.Entities;
@@ -11,6 +9,8 @@ using OrderHelperLib;
 using OrderHelperLib.Dtos.Users;
 using OrderHelperLib.Req_Models.Users;
 using OrderHelperLib.Results;
+using Q_DoApi.Core.Extensions;
+using Q_DoApi.Core.Utls;
 using Utls;
 
 namespace Do_Api.Funcs
@@ -20,6 +20,7 @@ namespace Do_Api.Funcs
         private JwtTokenService JwtService { get; }
         private UserManager<User> UserManager { get; }
         private RiderManager RiderManager { get; }
+
         public LoginFunc(JwtTokenService jwtService, UserManager<User> userManager, RiderManager riderManager)
         {
             JwtService = jwtService;
@@ -27,21 +28,21 @@ namespace Do_Api.Funcs
             RiderManager = riderManager;
         }
 
-        [Function(nameof(Anonymous_RegisterApi))]
-        public async Task<HttpResponseData> Anonymous_RegisterApi(
+        [Function(nameof(Anonymous_User_Register))]
+        public async Task<HttpResponseData> Anonymous_User_Register(
             [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)]
             HttpRequestData req,
             FunctionContext context)
         {
-            var log = context.GetLogger(nameof(Anonymous_RegisterApi));
-            var b = await req.GetBagAsync();
+            var (functionName, b, log) = await req.GetBagWithLogAsync(context);
             var data = b.Get<User_RegDto>(0);
 
-            var user = new User();
+            var user = Entity.Instance<User>();
             user.UserName = data.Username;
             user.Email = data.Email;
             user.Lingau = Entity.Instance<Lingau, string>(Guid.NewGuid().ToString());
             var result = await UserManager.CreateAsync(user, data.Password);
+            await UserManager.AddToRoleAsync(user, Auth.Role_User);
 
             if (!result.Succeeded)
             {
@@ -51,8 +52,8 @@ namespace Do_Api.Funcs
                 return errorResponse;
             }
 
-            var token = JwtService.GenerateAccessToken(user);
-            var refreshToken = JwtService.GenerateRefreshToken(user);
+            var token = JwtService.GenerateUserAccessToken(user);
+            var refreshToken = JwtService.GenerateUserRefreshToken(user);
             var successResponse = req.CreateResponse(HttpStatusCode.OK);
             var loginResult = new Login_Result
             {
@@ -70,43 +71,71 @@ namespace Do_Api.Funcs
             var bag = DataBag.SerializeWithName(nameof(Login_Result), loginResult);
             await successResponse.WriteStringAsync(bag);
             return successResponse;
+        }        
+        
+        [Function(nameof(Anonymous_Rider_Create))]
+        public async Task<HttpResponseData> Anonymous_Rider_Create(
+            [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)]
+            HttpRequestData req,
+            FunctionContext context)
+        {
+            var functionName = nameof(Anonymous_Rider_Create);
+            var modelJson = await req.ReadAsStringAsync();
+            var data = Json.Deserialize<User_RegDto>(modelJson);
+            //var (functionName, b, log) = await req.GetBagWithLogAsync(context);
+
+            var user = Entity.Instance<User>();
+            user.UserName = data.Username;
+            user.Email = data.Email;
+            user.Lingau = Entity.Instance<Lingau, string>(Guid.NewGuid().ToString());
+            var result = await UserManager.CreateAsync(user, data.Password);
+            await UserManager.AddToRoleAsync(user, Auth.Role_Rider);
+            if (!result.Succeeded)
+            {
+                return await req.WriteStringAsync(string.Join("\n",
+                    result.Errors.Select(r => $"{r.Code}:{r.Description}")));
+            }
+            var rider = await RiderManager.CreateRiderAsync(user);
+
+            var token = JwtService.GenerateRiderAccessToken(user, rider);
+            var refreshToken = JwtService.GenerateRiderRefreshToken(user, rider.Id);
+            var loginResult = new Login_Result
+            {
+                access_token = token,
+                refresh_token = refreshToken,
+                User = new UserModel
+                {
+                    Id = user.Id,
+                    Username = user.UserName,
+                    Email = user.Email,
+                    Phone = user.PhoneNumber,
+                    Name = user.Name
+                }
+            };
+            return await req.WriteBagAsync(functionName, loginResult);
         }
 
-        [Function(nameof(Anonymous_LoginApi))]
-        public async Task<HttpResponseData> Anonymous_LoginApi(
+        [Function(nameof(Anonymous_Login_User))]
+        public async Task<HttpResponseData> Anonymous_Login_User(
             [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req,
             FunctionContext context)
         {
-            var log = context.GetLogger(nameof(Anonymous_LoginApi));
-
-            var b = await req.GetBagAsync();
-            if (b == null)
-            {
-                var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                await errorResponse.WriteStringAsync("Invalid request.");
-                return errorResponse;
-            }
+            var (functionName, b, log) = await req.GetBagWithLogAsync(context);
             var loginModel = b.Get<User_LoginDto>(0);
 
             var user = await UserManager.FindByNameAsync(loginModel.Username);
             if (user == null)
-            {
-                var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                await errorResponse.WriteStringAsync("Invalid username or password.");
-                return errorResponse;
-            }
+                return await req.WriteStringAsync("Invalid username or password.");
+
+            if (!await UserManager.IsInRoleAsync(user,Auth.Role_User))
+                return await req.WriteStringAsync("Invalid username or password.");
 
             var isValidPassword = await UserManager.CheckPasswordAsync(user, loginModel.Password);
             if (!isValidPassword)
-            {
-                var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                await errorResponse.WriteStringAsync("Invalid username or password.");
-                return errorResponse;
-            }
+                return await req.WriteStringAsync("Invalid username or password.");
 
-            var token = JwtService.GenerateAccessToken(user);
-            var refreshToken = JwtService.GenerateRefreshToken(user);
-            var successResponse = req.CreateResponse(HttpStatusCode.OK);
+            var token = JwtService.GenerateUserAccessToken(user);
+            var refreshToken = JwtService.GenerateUserRefreshToken(user);
             var result = new Login_Result
             {
                 access_token = token,
@@ -120,65 +149,43 @@ namespace Do_Api.Funcs
                     Name = user.Name
                 }
             };
-            var bag = DataBag.SerializeWithName(nameof(Login_Result), result);
-            await successResponse.WriteStringAsync(bag);
-            return successResponse;
+            return await req.WriteBagAsync(functionName, result);
         }
 
-        [Function(nameof(Anonymous_RiderLoginApi))]
-        public async Task<HttpResponseData> Anonymous_RiderLoginApi(
+        [Function(nameof(Anonymous_Login_Rider))]
+        public async Task<HttpResponseData> Anonymous_Login_Rider(
             [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req,
             FunctionContext context)
         {
-            var log = context.GetLogger(nameof(Anonymous_RiderLoginApi));
-
-            var b = await req.GetBagAsync();
-            if (b == null)
-            {
-                var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                await errorResponse.WriteStringAsync("Invalid request.");
-                return errorResponse;
-            }
+            var (functionName, b, log) = await req.GetBagWithLogAsync(context);
             var loginModel = b.Get<User_LoginDto>(0);
 
             var user = await UserManager.FindByNameAsync(loginModel.Username);
+            if (user !=null 
+                && await UserManager.IsInRoleAsync(user, Auth.Role_Rider) 
+                && await UserManager.CheckPasswordAsync(user, loginModel.Password))
+                return await req.WriteStringAsync("Invalid username or password.");
+
             var rider = await RiderManager.FindByUserIdAsync(user.Id);
             if (rider == null)
-            {
-                var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                await errorResponse.WriteStringAsync("Invalid username or password.");
-                return errorResponse;
-            }
+                return await req.WriteStringAsync("Invalid username or password.");
 
-            var isValidPassword = await UserManager.CheckPasswordAsync(user, loginModel.Password);
-            if (!isValidPassword)
-            {
-                var errorResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                await errorResponse.WriteStringAsync("Invalid username or password.");
-                return errorResponse;
-            }
-
-            var riderId = rider.Id.ToString();
-            var riderClaim = new Claim(Auth.RiderId, riderId);
-            var token = JwtService.GenerateAccessToken(user, riderClaim);
-            var refreshToken = JwtService.GenerateRefreshToken(user, riderClaim);
-            var successResponse = req.CreateResponse(HttpStatusCode.OK);
+            var token = JwtService.GenerateRiderAccessToken(user, rider);
+            var refreshToken = JwtService.GenerateRiderRefreshToken(user, rider.Id);
             var result = new Login_Result
             {
                 access_token = token,
                 refresh_token = refreshToken,
                 User = new UserModel
                 {
-                    Id = riderId,
+                    Id = rider.Id.ToString(),
                     Username = user.UserName,
                     Email = user.Email,
                     Phone = user.PhoneNumber,
                     Name = user.Name
                 }
             };
-            var bag = DataBag.SerializeWithName(nameof(Login_Result), result);
-            await successResponse.WriteStringAsync(bag);
-            return successResponse;
+            return await req.WriteBagAsync(functionName, result);
         }
     
 
@@ -187,55 +194,43 @@ namespace Do_Api.Funcs
             [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req,
             FunctionContext context)
         {
-            var log = context.GetLogger(nameof(User_ReloginApi));
+            var (functionName, b, log) = await req.GetBagWithLogAsync(context); 
             var refreshToken = GetValueFromHeader(req, JwtTokenService.RefreshTokenHeader);
-
             var hasRefreshToken = !string.IsNullOrWhiteSpace(refreshToken);
 
             if (!hasRefreshToken)
-            {
-                var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                if (!hasRefreshToken) await badRequestResponse.WriteStringAsync("Refresh token is missing");
-                return badRequestResponse;
-            }
+                return await req.WriteStringAsync("Refresh token is missing");
 
             var bag = await req.GetBagAsync();
             var username = bag?.Get<string>(0) ?? null;
             if (bag == null || string.IsNullOrWhiteSpace(username))
-            {
-                var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                if (!hasRefreshToken) await badRequestResponse.WriteStringAsync("Username not found!");
-                return badRequestResponse;
-            }
+                return await req.WriteStringAsync("Username not found!");
 
             var isValid = await JwtService.ValidateRefreshTokenAsync(refreshToken, username);
             if(!isValid)
             {
-                log.LogError("Invalid refresh token");
-                var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                await badRequestResponse.WriteStringAsync("Invalid refresh token");
-                return badRequestResponse;
+                log.Event("Invalid refresh token");
+                return await req.WriteStringAsync("Invalid refresh token");
             }
 
             var user = await UserManager.FindByNameAsync(username);
             if (user == null)
-            {
-                var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-                await badRequestResponse.WriteStringAsync("User not found");
-                return badRequestResponse;
-            }
-            var riderId = context.Items[Auth.RiderId].ToString() ?? null;
+                return await req.WriteStringAsync("User not found");
 
             string newAccessToken;
-            if (riderId != null)
+            if (context.IsRider())
             {
-                var riderClaim = new Claim(Auth.RiderId, riderId);
-                newAccessToken = JwtService.GenerateAccessToken(user, riderClaim);
+                var riderId = context.Items[Auth.RiderId].ToString() ?? null;
+                if (string.IsNullOrWhiteSpace(riderId))
+                    return await req.WriteStringAsync("Rider not found");
+                if (!int.TryParse(riderId, out var rid))
+                    return await req.WriteStringAsync("Rider not found");
+                var rider = await RiderManager.FindByIdAsync(rid);
+                if (rider == null) return await req.WriteStringAsync("Rider not found");
+                newAccessToken = JwtService.GenerateRiderAccessToken(user, rider);
             }
-            else newAccessToken = JwtService.GenerateAccessToken(user);
+            else newAccessToken = JwtService.GenerateUserAccessToken(user);
 
-            var okResponse = req.CreateResponse(HttpStatusCode.OK);
-            okResponse.Headers.Add("Content-Type", "application/json");
             var loginResult = new Login_Result
             {
                 access_token = newAccessToken,
@@ -249,8 +244,7 @@ namespace Do_Api.Funcs
                     Name = user.Name
                 }
             };
-            await okResponse.WriteStringAsync(DataBag.SerializeWithName(nameof(loginResult), loginResult));
-            return okResponse;
+            return await req.WriteBagAsync(functionName, loginResult);
 
         }
 

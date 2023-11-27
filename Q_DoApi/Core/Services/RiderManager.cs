@@ -13,9 +13,13 @@ public class RiderManager
         Db = db;
     }
 
-    public async Task<Rider?> FindByIdAsync(int deliveryManId, bool includeDeleted = false) => includeDeleted
-        ? await Db.Riders.FirstOrDefaultAsync(d => d.Id == deliveryManId)
-        : await Db.Riders.Where(d => !d.IsDeleted).FirstOrDefaultAsync(d => d.Id == deliveryManId);
+    public async Task<Rider?> FindByIdAsync(long? riderId, bool includeDeleted = false)
+    {
+        if (riderId == null) return null;
+        return includeDeleted
+            ? await Db.Riders.FirstOrDefaultAsync(d => d.Id == riderId)
+            : await Db.Riders.Where(d => !d.IsDeleted).FirstOrDefaultAsync(d => d.Id == riderId);
+    }
 
     public async Task<Rider> CreateRiderAsync(User user)
     {
@@ -45,9 +49,9 @@ public class RiderManager
     }
 
     //用户Id查找rider
-    public async Task<Rider?> FindByUserIdAsync(string userId) =>
-        await Db.Riders.FirstOrDefaultAsync(d => !d.IsDeleted && d.UserId == userId);
-    //用riderId查找rider
-    public async Task<Rider?> FindByRiderIdAsync(int riderId) =>
-        await Db.Riders.FirstOrDefaultAsync(d => !d.IsDeleted && d.Id == riderId);
+    public async Task<Rider?> FindByUserIdAsync(string userId)
+    {
+        if(string.IsNullOrEmpty(userId)) return null;
+        return await Db.Riders.FirstOrDefaultAsync(d => !d.IsDeleted && d.UserId == userId);
+    }
 }

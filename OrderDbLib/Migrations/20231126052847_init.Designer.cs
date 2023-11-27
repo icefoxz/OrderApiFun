@@ -12,7 +12,7 @@ using OrderDbLib;
 namespace OrderDbLib.Migrations
 {
     [DbContext(typeof(OrderDbContext))]
-    [Migration("20230803044020_init")]
+    [Migration("20231126052847_init")]
     partial class init
     {
         /// <inheritdoc />
@@ -20,7 +20,7 @@ namespace OrderDbLib.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "7.0.4")
+                .HasAnnotation("ProductVersion", "7.0.14")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -160,11 +160,11 @@ namespace OrderDbLib.Migrations
 
             modelBuilder.Entity("OrderDbLib.Entities.DeliveryOrder", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("bigint");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<long>("CreatedAt")
                         .HasColumnType("bigint");
@@ -179,10 +179,17 @@ namespace OrderDbLib.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("RiderId")
-                        .HasColumnType("int");
+                    b.Property<long?>("RiderId")
+                        .HasColumnType("bigint");
 
                     b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StatusHistory")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("SubState")
                         .HasColumnType("int");
 
                     b.Property<long>("UpdatedAt")
@@ -241,13 +248,13 @@ namespace OrderDbLib.Migrations
                     b.ToTable("Lingaus");
                 });
 
-            modelBuilder.Entity("OrderDbLib.Entities.OrderTag", b =>
+            modelBuilder.Entity("OrderDbLib.Entities.Report", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("bigint");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<long>("CreatedAt")
                         .HasColumnType("bigint");
@@ -255,17 +262,23 @@ namespace OrderDbLib.Migrations
                     b.Property<long>("DeletedAt")
                         .HasColumnType("bigint");
 
-                    b.Property<int?>("DeliveryOrderId")
-                        .HasColumnType("int");
+                    b.Property<long?>("DeliveryOrderId")
+                        .HasColumnType("bigint");
 
-                    b.Property<string>("Description")
+                    b.Property<string>("ImpactDescription")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("IncidentDescription")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Name")
+                    b.Property<string>("Remark")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("TimeOfOccurrence")
+                        .HasColumnType("bigint");
 
                     b.Property<long>("UpdatedAt")
                         .HasColumnType("bigint");
@@ -277,16 +290,16 @@ namespace OrderDbLib.Migrations
 
                     b.HasIndex("DeliveryOrderId");
 
-                    b.ToTable("OrderTag");
+                    b.ToTable("Reports");
                 });
 
             modelBuilder.Entity("OrderDbLib.Entities.Rider", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                        .HasColumnType("bigint");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
 
                     b.Property<long>("CreatedAt")
                         .HasColumnType("bigint");
@@ -322,6 +335,113 @@ namespace OrderDbLib.Migrations
                     b.ToTable("Riders");
                 });
 
+            modelBuilder.Entity("OrderDbLib.Entities.Tag", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("DeletedAt")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Tags");
+                });
+
+            modelBuilder.Entity("OrderDbLib.Entities.Tag_Do", b =>
+                {
+                    b.Property<long>("DeliveryOrderId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("TagId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("DeletedAt")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("DeliveryOrderId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("Tag_dos");
+                });
+
+            modelBuilder.Entity("OrderDbLib.Entities.Tag_Report", b =>
+                {
+                    b.Property<long>("ReportId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("TagId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("CreatedAt")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("DeletedAt")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("UpdatedAt")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("ReportId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("Tag_reports");
+                });
+
             modelBuilder.Entity("OrderDbLib.Entities.User", b =>
                 {
                     b.Property<string>("Id")
@@ -329,6 +449,9 @@ namespace OrderDbLib.Migrations
 
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
+
+                    b.Property<string>("AvatarUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -478,13 +601,10 @@ namespace OrderDbLib.Migrations
 
                     b.OwnsOne("OrderDbLib.Entities.DeliveryInfo", "DeliveryInfo", b1 =>
                         {
-                            b1.Property<int>("DeliveryOrderId")
-                                .HasColumnType("int");
+                            b1.Property<long>("DeliveryOrderId")
+                                .HasColumnType("bigint");
 
                             b1.Property<float>("Distance")
-                                .HasColumnType("real");
-
-                            b1.Property<float>("Fee")
                                 .HasColumnType("real");
 
                             b1.HasKey("DeliveryOrderId");
@@ -496,8 +616,8 @@ namespace OrderDbLib.Migrations
 
                             b1.OwnsOne("OrderDbLib.Entities.Location", "EndLocation", b2 =>
                                 {
-                                    b2.Property<int>("DeliveryInfoDeliveryOrderId")
-                                        .HasColumnType("int");
+                                    b2.Property<long>("DeliveryInfoDeliveryOrderId")
+                                        .HasColumnType("bigint");
 
                                     b2.Property<string>("Address")
                                         .HasColumnType("nvarchar(max)");
@@ -521,8 +641,8 @@ namespace OrderDbLib.Migrations
 
                             b1.OwnsOne("OrderDbLib.Entities.Location", "StartLocation", b2 =>
                                 {
-                                    b2.Property<int>("DeliveryInfoDeliveryOrderId")
-                                        .HasColumnType("int");
+                                    b2.Property<long>("DeliveryInfoDeliveryOrderId")
+                                        .HasColumnType("bigint");
 
                                     b2.Property<string>("Address")
                                         .HasColumnType("nvarchar(max)");
@@ -553,8 +673,8 @@ namespace OrderDbLib.Migrations
 
                     b.OwnsOne("OrderDbLib.Entities.ItemInfo", "ItemInfo", b1 =>
                         {
-                            b1.Property<int>("DeliveryOrderId")
-                                .HasColumnType("int");
+                            b1.Property<long>("DeliveryOrderId")
+                                .HasColumnType("bigint");
 
                             b1.Property<float>("Height")
                                 .HasColumnType("real");
@@ -568,8 +688,8 @@ namespace OrderDbLib.Migrations
                             b1.Property<string>("Remark")
                                 .HasColumnType("nvarchar(max)");
 
-                            b1.Property<int>("Volume")
-                                .HasColumnType("int");
+                            b1.Property<double>("Volume")
+                                .HasColumnType("float");
 
                             b1.Property<float>("Weight")
                                 .HasColumnType("real");
@@ -587,20 +707,26 @@ namespace OrderDbLib.Migrations
 
                     b.OwnsOne("OrderDbLib.Entities.PaymentInfo", "PaymentInfo", b1 =>
                         {
-                            b1.Property<int>("DeliveryOrderId")
-                                .HasColumnType("int");
+                            b1.Property<long>("DeliveryOrderId")
+                                .HasColumnType("bigint");
 
-                            b1.Property<int>("PaymentMethod")
-                                .HasColumnType("int");
+                            b1.Property<float>("Charge")
+                                .HasColumnType("real");
 
-                            b1.Property<bool>("PaymentReceived")
+                            b1.Property<float>("Fee")
+                                .HasColumnType("real");
+
+                            b1.Property<bool>("IsReceived")
                                 .HasColumnType("bit");
 
-                            b1.Property<string>("PaymentReference")
+                            b1.Property<int>("Method")
+                                .HasColumnType("int");
+
+                            b1.Property<string>("Reference")
                                 .HasColumnType("nvarchar(max)");
 
-                            b1.Property<float>("Price")
-                                .HasColumnType("real");
+                            b1.Property<int>("TransactionId")
+                                .HasColumnType("int");
 
                             b1.HasKey("DeliveryOrderId");
 
@@ -612,8 +738,8 @@ namespace OrderDbLib.Migrations
 
                     b.OwnsOne("OrderDbLib.Entities.ReceiverInfo", "ReceiverInfo", b1 =>
                         {
-                            b1.Property<int>("DeliveryOrderId")
-                                .HasColumnType("int");
+                            b1.Property<long>("DeliveryOrderId")
+                                .HasColumnType("bigint");
 
                             b1.Property<string>("Name")
                                 .IsRequired()
@@ -648,10 +774,19 @@ namespace OrderDbLib.Migrations
 
                     b.OwnsOne("OrderDbLib.Entities.SenderInfo", "SenderInfo", b1 =>
                         {
-                            b1.Property<int>("DeliveryOrderId")
-                                .HasColumnType("int");
+                            b1.Property<long>("DeliveryOrderId")
+                                .HasColumnType("bigint");
 
-                            b1.Property<string>("SenderUserId")
+                            b1.Property<string>("Name")
+                                .IsRequired()
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("NormalizedPhoneNumber")
+                                .IsRequired()
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<string>("PhoneNumber")
+                                .IsRequired()
                                 .HasColumnType("nvarchar(max)");
 
                             b1.Property<string>("UserId")
@@ -700,11 +835,36 @@ namespace OrderDbLib.Migrations
                         .OnDelete(DeleteBehavior.Cascade);
                 });
 
-            modelBuilder.Entity("OrderDbLib.Entities.OrderTag", b =>
+            modelBuilder.Entity("OrderDbLib.Entities.Report", b =>
                 {
                     b.HasOne("OrderDbLib.Entities.DeliveryOrder", null)
-                        .WithMany("Tags")
+                        .WithMany("Reports")
                         .HasForeignKey("DeliveryOrderId");
+
+                    b.OwnsOne("OrderDbLib.Entities.ReportResolve", "Resolve", b1 =>
+                        {
+                            b1.Property<long>("ReportId")
+                                .HasColumnType("bigint");
+
+                            b1.Property<string>("Description")
+                                .IsRequired()
+                                .HasColumnType("nvarchar(max)");
+
+                            b1.Property<int>("OrderStatus")
+                                .HasColumnType("int");
+
+                            b1.Property<int>("PaymentStatus")
+                                .HasColumnType("int");
+
+                            b1.HasKey("ReportId");
+
+                            b1.ToTable("Reports");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ReportId");
+                        });
+
+                    b.Navigation("Resolve");
                 });
 
             modelBuilder.Entity("OrderDbLib.Entities.Rider", b =>
@@ -714,6 +874,44 @@ namespace OrderDbLib.Migrations
                         .HasForeignKey("UserId");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("OrderDbLib.Entities.Tag_Do", b =>
+                {
+                    b.HasOne("OrderDbLib.Entities.DeliveryOrder", "DeliveryOrder")
+                        .WithMany("Tag_Dos")
+                        .HasForeignKey("DeliveryOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OrderDbLib.Entities.Tag", "Tag")
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DeliveryOrder");
+
+                    b.Navigation("Tag");
+                });
+
+            modelBuilder.Entity("OrderDbLib.Entities.Tag_Report", b =>
+                {
+                    b.HasOne("OrderDbLib.Entities.Report", "Report")
+                        .WithMany("Tag_Reports")
+                        .HasForeignKey("ReportId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("OrderDbLib.Entities.Tag", "Tag")
+                        .WithMany()
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Report");
+
+                    b.Navigation("Tag");
                 });
 
             modelBuilder.Entity("OrderDbLib.Entities.User", b =>
@@ -727,7 +925,14 @@ namespace OrderDbLib.Migrations
 
             modelBuilder.Entity("OrderDbLib.Entities.DeliveryOrder", b =>
                 {
-                    b.Navigation("Tags");
+                    b.Navigation("Reports");
+
+                    b.Navigation("Tag_Dos");
+                });
+
+            modelBuilder.Entity("OrderDbLib.Entities.Report", b =>
+                {
+                    b.Navigation("Tag_Reports");
                 });
 #pragma warning restore 612, 618
         }

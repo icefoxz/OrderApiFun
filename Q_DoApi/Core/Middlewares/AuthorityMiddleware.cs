@@ -1,4 +1,6 @@
-﻿using System.Net;
+﻿using System.Data;
+using System.Net;
+using System.Security.Claims;
 using Do_Api.Funcs;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -16,6 +18,7 @@ namespace OrderApiFun.Core.Middlewares
         private const string AnonymousPrefix = "Anonymous";
         private const string UserPrefix = "User";
         private const string RiderPrefix = "Rider";
+        private const string SwaggerPrefix = "RenderSwaggerUI";
 
         public AuthorityMiddleware(JwtTokenService jwtTokenService, RiderManager riderManager)
         {
@@ -44,6 +47,9 @@ namespace OrderApiFun.Core.Middlewares
                 case RiderPrefix:
                     await RiderInvocationAsync(context, next, log);
                     return;
+                case SwaggerPrefix:
+                    await next.Invoke(context);
+                    return;
             }
 
             var req = await context.GetHttpRequestDataAsync();
@@ -67,13 +73,23 @@ namespace OrderApiFun.Core.Middlewares
 
             var result = await TokenValidationAsync(bearerToken);
             if (!await TokenResultUserHandlingPassAsync(context, log, result, req))
-            {
                 return;
-            }
 
             if (!await VerifyTokenTypeAsync(context, log, result, req, JwtTokenService.AccessTokenHeader)) return;
-            var rider = await RiderManager.FindByUserIdAsync(result.Principal.Identity.Name);
+
+            var role = result.Principal.FindFirstValue(ClaimTypes.Role);
+            if (role != Auth.Role_Rider)
+            {
+                var message = "Token role not matched!";
+                // 如果令牌无效，设置一个适当的响应
+                await AuthenticationFailedResponseAsync(context, req, log, message);
+                return;
+            }
+            var riderId = result.Principal.FindFirstValue(Auth.RiderId);
+            if (riderId == null) return;
+            var rider = await RiderManager.FindByUserIdAsync(riderId);
             if (rider == null) return;
+            context.Items[Auth.ContextRole] = Auth.Role_Rider;
             context.Items[Auth.RiderId] = rider.Id;
             await next.Invoke(context);
         }
@@ -93,7 +109,9 @@ namespace OrderApiFun.Core.Middlewares
 
             var result = await TokenValidationAsync(bearerToken);
             //如果用户要刷新token,需要提交刷新令牌, 但一般都是提交AccessToken
-            var tokenType = functionName == nameof(LoginFunc.User_ReloginApi)?JwtTokenService.RefreshTokenHeader : JwtTokenService.AccessTokenHeader;
+            var tokenType = functionName == nameof(LoginFunc.User_ReloginApi)
+                ? JwtTokenService.RefreshTokenHeader
+                : JwtTokenService.AccessTokenHeader;
             if (!await VerifyTokenTypeAsync(context, log, result, req, tokenType)) return;
             if (!await TokenResultUserHandlingPassAsync(context, log, result, req)) return;
 
@@ -104,24 +122,26 @@ namespace OrderApiFun.Core.Middlewares
         private static async Task<bool> TokenResultUserHandlingPassAsync(FunctionContext context, ILogger<AuthorityMiddleware> log, TokenValidation result,
             HttpRequestData? req)
         {
-            switch (result.Result)
+            if (result.Result != TokenValidation.Results.Valid)
             {
-                case TokenValidation.Results.Valid:
-                    context.Items[Auth.UserId] = result.Principal.Identity.Name;
-                    break;
-                case TokenValidation.Results.Expired:
-                case TokenValidation.Results.Error:
-                {
-                    var message = result.Result == TokenValidation.Results.Expired
-                        ? "Token expired"
-                        : "Invalid token";
-                    // 如果令牌无效，设置一个适当的响应
-                    await AuthenticationFailedResponseAsync(context, req, log,message);
-                    return false;
-                }
-                default:
-                    throw new ArgumentOutOfRangeException();
+                var message = result.Result == TokenValidation.Results.Expired
+                    ? "Token expired"
+                    : "Invalid token";
+                // 如果令牌无效，设置一个适当的响应
+                await AuthenticationFailedResponseAsync(context, req, log, message);
+                return false;
             }
+
+            var role = result.Principal.FindFirstValue(ClaimTypes.Role);
+            if (role != Auth.Role_User)
+            {
+                var message = "Token role not matched!";
+                // 如果令牌无效，设置一个适当的响应
+                await AuthenticationFailedResponseAsync(context, req, log, message);
+                return false;
+            }
+            context.Items[Auth.ContextRole] = Auth.Role_User;
+            context.Items[Auth.UserId] = result.Principal.Identity.Name;
             return true;
         }
 

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using OrderDbLib;
 using OrderDbLib.Entities;
 using Q_DoApi.Core.Utls;
+using WebUtlLib;
 
 namespace OrderApiFun.Core.Services;
 
@@ -20,26 +21,25 @@ public class LingauManager
         var user = await GetUserAsync(userId);
         var lastCredit = user.Lingau.Credit;
         user.Lingau.Credit += amount;
-        user.Lingau.UpdateFileTimeStamp();
-        user.UpdateFileTimeStamp();
         log.Event($"Amount : {amount}, User[{userId}].{lastCredit} to {user.Lingau.Credit}");
         await Db.SaveChangesAsync();
     }
     //lingau转账
-    public async Task TransferLingauAsync(string fromUserId, string toUserId, float amount, ILogger log)
+    public async Task<ResultOf<User>> TransferLingauAsync(string fromUserId, string toUserId, float amount, ILogger log)
     {
         var fromUser = await GetUserAsync(fromUserId);
         var toUser = await GetUserAsync(toUserId);
+        if (fromUser == null || toUser == null)
+            return ResultOf.Fail<User>("User not found!");
         var fromLastCredit = fromUser.Lingau.Credit;
         var toLastCredit = toUser.Lingau.Credit;
+        if (fromUser.Lingau.Credit < amount)
+            return ResultOf.Fail<User>("Insufficient balance!");
         fromUser.Lingau.Credit -= amount;
         toUser.Lingau.Credit += amount;
-        fromUser.Lingau.UpdateFileTimeStamp();
-        toUser.Lingau.UpdateFileTimeStamp();
-        fromUser.UpdateFileTimeStamp();
-        toUser.UpdateFileTimeStamp();
         log.Event($"Amount : {amount}, From User[{fromUserId}].{fromLastCredit} to {fromUser.Lingau.Credit}, ToUser[{toUserId}] from {toLastCredit} to {toUser.Lingau.Credit}.");
         await Db.SaveChangesAsync();
+        return ResultOf.Success(fromUser);
     }
 
     public async Task<Lingau> GetLingauAsync(string userId)

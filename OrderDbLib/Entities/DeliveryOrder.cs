@@ -11,7 +11,7 @@ namespace OrderDbLib.Entities
         // 执行用户
         public User User { get; set; }
         // 标签
-        public ICollection<Tag> Tags { get; set; }
+        public ICollection<Tag_Do> Tag_Dos { get; set; }
         //物品信息
         public ItemInfo ItemInfo { get; set; }
         // (马来西亚)州属Id
@@ -23,12 +23,26 @@ namespace OrderDbLib.Entities
         //运送信息
         public DeliveryInfo DeliveryInfo { get; set; }
         //骑手信息
-        public int? RiderId { get; set; }
+        public long? RiderId { get; set; }
         public Rider? Rider { get; set; }
         //付款信息
         public PaymentInfo? PaymentInfo { get; set; }
         //订单状态, 正数 = 进行中, 负数 = 已完成
         public int Status { get; set; }
+        //订单子状态
+        public int SubState { get; set; }
+        //订单状态历史(进程)
+        public StatusHistory[] StatusHistory { get; set; } = Array.Empty<StatusHistory>();
+        //订单报告
+        public ICollection<Report> Reports { get; set; }
+    }
+
+    public class StatusHistory
+    {
+        public int Status { get; set; }
+        public DateTime Timestamp { get; set; }
+        public string Name { get; set; }
+        public string? Description { get; set; }
     }
 
     public class PaymentInfo

@@ -2,10 +2,8 @@ namespace OrderDbLib.Entities;
 
 public class Report : Entity
 {
-    public DeliveryOrder Order { get; set; }
-    public int OrderId { get; set; }
     public long TimeOfOccurrence { get; set; }
-    public ICollection<Tag> Tags { get; set; }
+    public ICollection<Tag_Report> Tag_Reports { get; set; }
     /// <summary>
     /// 事件描述
     /// </summary>

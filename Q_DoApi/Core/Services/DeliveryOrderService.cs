@@ -1,4 +1,5 @@
-﻿using Mapster;
+﻿using System.Linq.Expressions;
+using Mapster;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -7,17 +8,19 @@ using OrderDbLib.Entities;
 using Utls;
 using OrderHelperLib.Contracts;
 using OrderHelperLib.Dtos.DeliveryOrders;
+using Q_DoApi.Core.Utls;
 using Q_DoApi.DtoMapping;
+using WebUtlLib;
 
 namespace OrderApiFun.Core.Services
 {
-    public class DeliveryOrderService
+    public class DoService
     {
         private OrderDbContext Db { get; }
         private UserManager<User> UserManager { get; }
         private LingauManager LingauManager { get; }
         private RiderManager RiderManager { get; }
-        public DeliveryOrderService(OrderDbContext db, UserManager<User> userManager, RiderManager riderManager, LingauManager lingauManager)
+        public DoService(OrderDbContext db, UserManager<User> userManager, RiderManager riderManager, LingauManager lingauManager)
         {
             Db = db;
             UserManager = userManager;
@@ -71,207 +74,71 @@ namespace OrderApiFun.Core.Services
             }
         }
 
-        private (bool isValid,string message) ValidateDeliveryOrder(DeliveryOrder order)
+        public async Task<PageList<DeliveryOrder>> User_GetDeliveryOrdersAsync(string? userId, int pageSize, int pageIndex,
+            Expression<Func<DeliveryOrder, bool>>? filter, ILogger log)
         {
-            var isValid = true;
-            var message = string.Empty;
-            // Add validation logic as needed
-
-            if (order.DeliveryInfo.StartLocation == null
-                || order.DeliveryInfo.EndLocation == null)
-            {
-                isValid = false;
-                message = "Coordinates error!";
-            }
-
-            if (string.IsNullOrWhiteSpace(order.ReceiverInfo.Name)
-                || string.IsNullOrWhiteSpace(order.ReceiverInfo.NormalizedPhoneNumber))
-            {
-                isValid = false;
-                message = "Receiver info error!";
-            }
-
-            if (order.DeliveryInfo.Distance is default(float)
-                || order.ItemInfo.Weight is default(float))
-            {
-                isValid = false;
-                message = "Delivery info error!";
-            }
-
-            // Additional validations can be added as needed
-            return (isValid, message);
-        }
-
-        public async Task<DeliveryOrder> UpdateOrderStatusByRiderAsync(int deliveryManId, int orderId, DeliveryOrderStatus newStatus)
-        {
-            // 验证DeliveryMan的权限
-            var deliveryMan = await RiderManager.FindByIdAsync(deliveryManId);
-            if (deliveryMan == null)
-            {
-                throw new InvalidOperationException("DeliveryMan not found");
-            }
-
-            var order = await FindByIdAsync(orderId);
-            if (order == null)
-            {
-                throw new InvalidOperationException("Order not found");
-            }
-
-            // 验证订单状态的顺序限制
-            if (!IsValidStatusTransition((DeliveryOrderStatus)order.Status, newStatus))
-            {
-                throw new InvalidOperationException($"Invalid status transition: {order.Status}->{newStatus}");
-            }
-
-            await UpdateOrderStatusAsync(order.Id, newStatus);
-
-            return order;
-            bool IsValidStatusTransition(DeliveryOrderStatus currentStatus, DeliveryOrderStatus status)
-            {
-                return currentStatus switch
-                {
-                    DeliveryOrderStatus.Created => status == DeliveryOrderStatus.Assigned,
-                    DeliveryOrderStatus.Assigned => status == DeliveryOrderStatus.Delivering,
-                    DeliveryOrderStatus.Delivering => status is DeliveryOrderStatus.Completed or DeliveryOrderStatus.Exception,
-                    DeliveryOrderStatus.Completed => false, // 无法更改已送达订单的状态
-                    DeliveryOrderStatus.Exception => false, // 无法更改异常订单的状态
-                    DeliveryOrderStatus.Canceled => false, // 无法更改取消订单的状态
-                    DeliveryOrderStatus.Close => false, // 无法更改结算订单的状态
-                    _ => throw new ArgumentOutOfRangeException(nameof(currentStatus))
-                };
-            }
-        }
-
-        public async Task<DeliveryOrder> UpdateOrderStatusBySenderAsync(int orderId, DeliveryOrderStatus newStatus, string senderId)
-        {
-            var order = await Db.DeliveryOrders.FindAsync(orderId);
-
-            if (order == null)
-            {
-                throw new InvalidOperationException("Order not found.");
-            }
-
-            if (order.UserId != senderId)
-            {
-                throw new InvalidOperationException("The sender does not have permission to update this order.");
-            }
-
-            // 验证订单状态的顺序限制
-            if (!IsValidStatusTransition((DeliveryOrderStatus)order.Status, newStatus))
-            {
-                throw new InvalidOperationException($"Invalid status transition: {order.Status}->{newStatus}");
-            }
-
-            await UpdateOrderStatusAsync(orderId, newStatus);
-            return order;
-
-            bool IsValidStatusTransition(DeliveryOrderStatus currentStatus, DeliveryOrderStatus status) =>
-                currentStatus switch
-                {
-                    DeliveryOrderStatus.Created => status == DeliveryOrderStatus.Canceled,
-                    DeliveryOrderStatus.Assigned => false, // 无法更改承接订单的状态
-                    DeliveryOrderStatus.Delivering => false, // 无法更改运送中订单的状态
-                    DeliveryOrderStatus.Completed => status == DeliveryOrderStatus.Exception,
-                    DeliveryOrderStatus.Exception => false, // 无法更改异常订单的状态
-                    DeliveryOrderStatus.Canceled => false, // 无法更改取消订单的状态
-                    DeliveryOrderStatus.Close => false, // 无法更改结算订单的状态
-                    _ => throw new ArgumentOutOfRangeException(nameof(currentStatus))
-                };
-        }
-
-        private async Task<DeliveryOrder?> FindByIdAsync(int orderId) =>
-            await Db.DeliveryOrders.FirstOrDefaultAsync(o => !o.IsDeleted && o.Id == orderId);
-
-        /// <summary>
-        /// 分配工作给DeliveryMan, 状态 = <see cref="DeliveryOrderStatus.Assigned"/>
-        /// </summary>
-        /// <param name="deliveryOrderId"></param>
-        /// <param name="deliveryManId"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentException"></exception>
-        public async Task<DeliveryOrder> AssignRiderAsync(int deliveryOrderId, int deliveryManId)
-        {
-            var deliveryOrder = await Db.DeliveryOrders.FindAsync(deliveryOrderId);
-            var deliveryMan = await RiderManager.FindByIdAsync(deliveryManId);
-            if (deliveryMan == null)
-                throw new NullReferenceException($"DeliveryMan[{deliveryManId}] not found!");
-            if (deliveryOrder == null)
-                throw new ArgumentException("Delivery order not found.");
-            deliveryOrder.RiderId = deliveryMan.Id;
-            deliveryOrder.Rider = deliveryMan;
-            deliveryOrder.Status = (int)DeliveryOrderStatus.Assigned;
-            deliveryOrder.UpdateFileTimeStamp();
-            await Db.SaveChangesAsync();
-            return deliveryOrder;
-        }
-
-        /// <summary>
-        /// 更新订单状态
-        /// </summary>
-        /// <param name="deliveryOrderId"></param>
-        /// <param name="newStatus"></param>
-        /// <returns></returns>
-        /// <exception cref="ArgumentException"></exception>
-        private async Task UpdateOrderStatusAsync(int deliveryOrderId, DeliveryOrderStatus newStatus)
-        {
-            var deliveryOrder = await Db.DeliveryOrders.FindAsync(deliveryOrderId);
-            if (deliveryOrder == null)
-            {
-                throw new ArgumentException("Delivery order not found.");
-            }
-
-            deliveryOrder.Status = (int)newStatus;
-            deliveryOrder.UpdateFileTimeStamp();
-            await Db.SaveChangesAsync();
-        }
-
-        public async Task<DeliveryOrder[]> User_GetDeliveryOrdersAsync(string? userId, int limit, int page, ILogger log)
-        {
-            log.LogInformation($"GetDeliveryOrders: userId={userId}, limit={limit}, page={page}");
-            page = Math.Max(1, page);
-            return await Db.DeliveryOrders
-                .Include(d=>d.Rider)
-                .Include(d=>d.ReceiverInfo.User)
-                .Include(d=>d.SenderInfo.User)
-                .Include(d=>d.User)
-                .ThenInclude(u=>u.Lingau)
-                .Where(o => o.UserId == userId && !o.IsDeleted)
-                .OrderByDescending(o => o.CreatedAt)
-                .Skip(limit * (page - 1))
-                .Take(limit)
-                .ToArrayAsync();
-        }        
-        
-        public async Task<DeliveryOrder[]> Rider_GetDeliveryOrdersAsync(int? riderId, int limit, int page, ILogger log)
-        {
-            log.LogInformation($"GetDeliveryOrders: userId={riderId}, limit={limit}, page={page}");
-            page = Math.Max(1, page);
-            return await Db.DeliveryOrders
-                .Include(d=>d.Rider)
-                .Include(d=>d.ReceiverInfo.User)
-                .Include(d=>d.SenderInfo.User)
-                .Include(d=>d.User)
-                .ThenInclude(u=>u.Lingau)
-                .Where(o => (o.RiderId == riderId || o.RiderId == default) && !o.IsDeleted)
-                .OrderByDescending(o => o.CreatedAt)
-                .Skip(limit * (page - 1))
-                .Take(limit)
-                .ToArrayAsync();
-        }
-
-        public async Task<DeliveryOrder?> Rider_GetDeliveryOrderAsync(int? riderId, int orderId, ILogger log)
-        {
-            log.LogInformation($"GetDeliveryOrders: userId={riderId}, orderId={orderId}");
-            return await Db.DeliveryOrders.FirstOrDefaultAsync(o =>
-                o.Id == orderId && o.RiderId == riderId && !o.IsDeleted);
-        }
-
-        public async Task<DeliveryOrder?> User_GetDeliveryOrderAsync(string? userId, int deliveryOrderId)
-        {
-            return await Db.DeliveryOrders
+            log.Event($"GetDeliveryOrders: userId={userId}, pageSize={pageSize}, page={pageIndex}");
+            var index = Math.Max(0, pageIndex);
+            var count = await OrderCountAsync(userId, filter);
+            var query = Db.DeliveryOrders
+                .Include(d => d.Rider)
+                .Include(d => d.ReceiverInfo.User)
+                .Include(d => d.SenderInfo.User)
                 .Include(d => d.User)
                 .ThenInclude(u => u.Lingau)
-                .FirstOrDefaultAsync(o => o.UserId == userId && o.Id == deliveryOrderId && !o.IsDeleted);
+                .Where(o => o.UserId == userId && !o.IsDeleted)
+                .AsNoTracking();
+
+            if (filter != null)
+                query = query.Where(filter);
+
+            var list = await query.OrderByDescending(o => o.CreatedAt)
+                .Skip(pageSize * index)
+                .Take(pageSize)
+                .ToArrayAsync();
+            return new PageList<DeliveryOrder>(index, pageSize, count, list);
+        }
+
+        public async Task<PageList<DeliveryOrder>> GetPageList(
+            int pageSize, int index, ILogger log,
+            Expression<Func<DeliveryOrder, bool>>? filter = null,
+            params (Expression<Func<DeliveryOrder, object>> sortExpression, SortDirection sortDirection)[] sorts)
+        {
+            log.LogInformation($"GetDeliveryOrders: pageSize={pageSize}, index={index}");
+            index = Math.Max(1, index);
+            var query = Db.DeliveryOrders
+                .Include(d => d.Rider)
+                .Include(d => d.ReceiverInfo.User)
+                .Include(d => d.SenderInfo.User)
+                .Include(d => d.User)
+                .ThenInclude(u => u.Lingau)
+                .Where(o => !o.IsDeleted);
+
+            if (filter != null)
+            {
+                query = query.Where(filter);
+            }
+
+            var count = await query.CountAsync();
+
+            query = AddInOrderedSorts(sorts, query);
+
+            var array = await query
+                .Skip(pageSize * (index - 1))
+                .Take(pageSize)
+                .ToArrayAsync();
+
+            return PageList.Instance(index, pageSize, count, array);
+        }
+
+        public async Task<DeliveryOrder?> GetFirstAsync(Expression<Func<DeliveryOrder, bool>> filter,
+            params (Expression<Func<DeliveryOrder, object>> sortExpression, SortDirection sortDirection)[] sorts)
+        {
+            var query = Db.DeliveryOrders
+                .Include(d => d.User)
+                .Where(o=>!o.IsDeleted)
+                .Where(filter);
+            return await AddInOrderedSorts(sorts, query).FirstOrDefaultAsync();
         }
 
         public async Task PayDeliveryOrderByLingauAsync(string userId, DeliveryOrder order, ILogger log)
@@ -289,5 +156,79 @@ namespace OrderApiFun.Core.Services
             }
             await LingauManager.UpdateLingauBalanceAsync(userId, price, log);
         }
+
+        public async Task<ResultOf<DeliveryOrder>> SubState_Update(DeliveryOrder order, TransitionRoles role, int subState, ILogger log)
+        {
+            log.Event($"Order.{order.Id}, {order.SubState} => {subState}, subState = {subState}");
+            if (!DoStateMap.IsAssignableSubState(role, order.SubState, subState))
+                return ResultOf.Fail(order, "State not assignable.");
+            await UpdateOrderStateAsync(order, subState, log);
+            return ResultOf.Success(order, string.Empty);
+        }
+
+        /// <summary>
+        /// 更新订单状态
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="ArgumentException"></exception>
+        private async Task UpdateOrderStateAsync(DeliveryOrder order, int subState, ILogger log)
+        {
+            order.Status = subState.ConvertToDoStatusInt();
+            order.SubState = subState;
+            await Db.SaveChangesAsync();
+            log.Event($"Order[{order.Id}] state updated to {order.Status}");
+        }
+
+        public async Task<ResultOf<DeliveryOrder>> AssignRiderAsync(long deliveryOrderId, Rider rider)
+        {
+            var deliveryOrder = await GetFirstAsync(o => o.Id == deliveryOrderId);
+            if (deliveryOrder == null) return ResultOf.Fail<DeliveryOrder>("Order not found!");
+            if (deliveryOrder.RiderId != null) return ResultOf.Fail<DeliveryOrder>("Order already assigned!");
+            deliveryOrder.RiderId = rider.Id;
+            deliveryOrder.Rider = rider;
+
+            deliveryOrder.Status = DoSubState.AssignState.ConvertToDoStatusInt();
+            deliveryOrder.SubState = DoSubState.AssignState;
+            await Db.SaveChangesAsync();
+            return ResultOf.Success(deliveryOrder);
+        }
+        #region private_methods
+        private async Task<int> OrderCountAsync(string? userId, Expression<Func<DeliveryOrder, bool>>? filter)
+        {
+            var query = Db.DeliveryOrders.AsNoTracking();
+            if (filter != null)
+                query = query.Where(filter);
+            return await query.CountAsync(o => o.UserId == userId && !o.IsDeleted);
+        }
+        // 应用提供的排序规则
+        private static IOrderedQueryable<DeliveryOrder> AddInOrderedSorts(
+            (Expression<Func<DeliveryOrder, object>> sortExpression, SortDirection sortDirection)[] sorts,
+            IQueryable<DeliveryOrder> query)
+        {
+            IOrderedQueryable<DeliveryOrder> orderedQuery;
+            if (sorts is { Length: > 0 })
+            {
+                var firstSort = sorts[0];
+                orderedQuery = firstSort.sortDirection == SortDirection.Ascending
+                    ? query.OrderBy(firstSort.sortExpression)
+                    : query.OrderByDescending(firstSort.sortExpression);
+
+                foreach (var sort in sorts.Skip(1))
+                {
+                    orderedQuery = sort.sortDirection == SortDirection.Ascending
+                        ? orderedQuery.ThenBy(sort.sortExpression)
+                        : orderedQuery.ThenByDescending(sort.sortExpression);
+                }
+            }
+            else
+            {
+                orderedQuery = query.OrderByDescending(o => o.CreatedAt);
+            }
+
+            // 总是以 CreatedAt 作为最后一个排序规则
+            orderedQuery = orderedQuery.ThenByDescending(o => o.CreatedAt);
+            return orderedQuery;
+        }
+        #endregion
     }
 }

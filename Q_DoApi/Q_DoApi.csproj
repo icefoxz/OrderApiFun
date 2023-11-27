@@ -1,29 +1,26 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
+	<LangVersion>11.0</LangVersion>
     <AzureFunctionsVersion>v4</AzureFunctionsVersion>
     <OutputType>Exe</OutputType>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.16.0" />
-    <PackageReference Include="Mapster" Version="7.3.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Cryptography.Internal" Version="7.0.4" />
-    <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="7.0.4" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.14.1" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.0.13" />
-    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.10.0" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.4">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="6.30.0" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.19.1" />
+    <PackageReference Include="Mapster" Version="7.4.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http" Version="3.1.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" Version="1.1.1" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="7.0.3" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker" Version="1.20.0" />
+    <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="1.16.2" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Q_DoServer\Services\leo.-delivery.-services\Delivery.Domains\Delivery.Domains.csproj" />
     <ProjectReference Include="..\..\Q_PR_C\ParcelRider\Assets\3rd\OrderHelperLib~\OrderHelperLib.csproj" />
     <ProjectReference Include="..\OrderDbLib\OrderDbLib.csproj" />
+    <ProjectReference Include="..\WebUtlLib\WebUtlLib.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Update="host.json">

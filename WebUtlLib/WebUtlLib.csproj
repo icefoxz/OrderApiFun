@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	<TargetFramework>net7.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Q_PR_C\ParcelRider\Assets\3rd\OrderHelperLib~\OrderHelperLib.csproj" />
+    <ProjectReference Include="..\OrderDbLib\OrderDbLib.csproj" />
+  </ItemGroup>
+
+</Project>

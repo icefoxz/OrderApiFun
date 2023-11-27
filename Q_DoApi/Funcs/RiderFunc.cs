@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using Mapster;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -6,6 +7,8 @@ using OrderApiFun.Core.Middlewares;
 using OrderApiFun.Core.Services;
 using OrderDbLib.Entities;
 using OrderHelperLib;
+using OrderHelperLib.Dtos.Users;
+using Q_DoApi.Core.Extensions;
 using Utls;
 
 namespace Do_Api.Funcs;
@@ -44,23 +47,40 @@ public class RiderFunc
         return response;
     }
 
+    [Function(nameof(Rider_Create))]
+    public async Task<HttpResponseData> Rider_Create(
+        [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req,
+        FunctionContext context)
+    {
+        var (funcName, bag, log) = await req.GetBagWithLogAsync(context);
+        // 解析请求主体获取用户ID
+        var riderId = context.GetRiderId();
+        var rider = await RiderManager.FindByIdAsync(riderId);
+        var userId = rider.UserId;
+        var transferAmount = bag.Get<float>(0);
+        var transferTargetUserId = bag.Get<string>(1);
+        var result = await LingauManager.TransferLingauAsync(userId, transferTargetUserId, transferAmount, log);
+        if (!result.IsSuccess)
+            return await req.WriteStringAsync(result.Message);
+        return await req.WriteBagAsync(funcName, result.Data.Adapt<UserModel>());
+    }
+
     //rider转账给user
     [Function(nameof(Rider_TransferToUser))]
     public async Task<HttpResponseData> Rider_TransferToUser(
         [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req,
         FunctionContext context)
     {
-        var log = context.GetLogger(nameof(Rider_TransferToUser));
+        var (funcName, bag, log) = await req.GetBagWithLogAsync(context);
         // 解析请求主体获取用户ID
-        int.TryParse(context.Items[Auth.RiderId].ToString(), out var riderId);
-        var rider = await RiderManager.FindByRiderIdAsync(riderId);
-        if (rider == null) throw new NullReferenceException($"Rider not found! Id = {riderId}");
-        var userId = context.Items[Auth.UserId].ToString();
-        var bag = await req.GetBagAsync();
+        var riderId = context.GetRiderId();
+        var rider = await RiderManager.FindByIdAsync(riderId);
+        var userId = rider.UserId;
         var transferAmount = bag.Get<float>(0);
         var transferTargetUserId = bag.Get<string>(1);
-        var response = req.CreateResponse(HttpStatusCode.OK);
-        await LingauManager.TransferLingauAsync(userId, transferTargetUserId, transferAmount, log);
-        return response;
+        var result = await LingauManager.TransferLingauAsync(userId, transferTargetUserId, transferAmount, log);
+        if (!result.IsSuccess)
+            return await req.WriteStringAsync(result.Message);
+        return await req.WriteBagAsync(funcName, result.Data.Adapt<UserModel>());
     }
 }

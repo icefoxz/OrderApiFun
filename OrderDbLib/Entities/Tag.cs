@@ -15,8 +15,25 @@ namespace OrderDbLib.Entities
 
     public class Tag : Entity
     {
-        public string Type { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public string? Value { get; set; }
         public string? Name { get; set; }
         public string? Description { get; set; }
+    }
+
+    public class Tag_Do : Entity
+    {
+        public long DeliveryOrderId { get; set; }
+        public DeliveryOrder DeliveryOrder { get; set; }
+        public long TagId { get; set; }
+        public Tag Tag { get; set; }
+    }    
+
+    public class Tag_Report : Entity
+    {
+        public long ReportId { get; set; }
+        public Report Report { get; set; }
+        public long TagId { get; set; }
+        public Tag Tag { get; set; }
     }
 }

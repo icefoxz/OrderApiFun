@@ -89,7 +89,7 @@ namespace OrderDbLib.Entities
     /// <summary>
     /// 实体主要生成类, 用于生成实体类
     /// </summary>
-    public class Entity : EntityBase<int>
+    public class Entity : EntityBase<long>
     {
         /// <summary>
         /// 基于Id(int)的实体生成

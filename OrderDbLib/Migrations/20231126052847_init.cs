@@ -26,6 +26,27 @@ namespace OrderDbLib.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Tags",
+                columns: table => new
+                {
+                    Id = table.Column<long>(type: "bigint", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Type = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Value = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Version = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<long>(type: "bigint", nullable: false),
+                    UpdatedAt = table.Column<long>(type: "bigint", nullable: false),
+                    DeletedAt = table.Column<long>(type: "bigint", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Tags", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AspNetRoleClaims",
                 columns: table => new
                 {
@@ -106,6 +127,7 @@ namespace OrderDbLib.Migrations
                     DeletedAt = table.Column<long>(type: "bigint", nullable: false),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false),
                     LingauId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    AvatarUrl = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -174,7 +196,7 @@ namespace OrderDbLib.Migrations
                 name: "Riders",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Phone = table.Column<string>(type: "nvarchar(max)", nullable: true),
@@ -200,18 +222,21 @@ namespace OrderDbLib.Migrations
                 name: "DeliveryOrders",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     ItemInfo_Weight = table.Column<float>(type: "real", nullable: false),
                     ItemInfo_Quantity = table.Column<int>(type: "int", nullable: false),
-                    ItemInfo_Volume = table.Column<int>(type: "int", nullable: false),
+                    ItemInfo_Volume = table.Column<double>(type: "float", nullable: false),
                     ItemInfo_Length = table.Column<float>(type: "real", nullable: false),
                     ItemInfo_Width = table.Column<float>(type: "real", nullable: false),
                     ItemInfo_Height = table.Column<float>(type: "real", nullable: false),
                     ItemInfo_Remark = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     MyState = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    SenderInfo_SenderUserId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     SenderInfo_UserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    SenderInfo_Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SenderInfo_PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SenderInfo_NormalizedPhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ReceiverInfo_Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ReceiverInfo_PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ReceiverInfo_NormalizedPhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: false),
@@ -225,19 +250,21 @@ namespace OrderDbLib.Migrations
                     DeliveryInfo_EndLocation_Latitude = table.Column<double>(type: "float", nullable: false),
                     DeliveryInfo_EndLocation_Longitude = table.Column<double>(type: "float", nullable: false),
                     DeliveryInfo_Distance = table.Column<float>(type: "real", nullable: false),
-                    DeliveryInfo_Fee = table.Column<float>(type: "real", nullable: false),
-                    RiderId = table.Column<int>(type: "int", nullable: true),
-                    PaymentInfo_Price = table.Column<float>(type: "real", nullable: true),
-                    PaymentInfo_PaymentMethod = table.Column<int>(type: "int", nullable: true),
-                    PaymentInfo_PaymentReference = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PaymentInfo_PaymentReceived = table.Column<bool>(type: "bit", nullable: true),
+                    RiderId = table.Column<long>(type: "bigint", nullable: true),
+                    PaymentInfo_Fee = table.Column<float>(type: "real", nullable: true),
+                    PaymentInfo_Charge = table.Column<float>(type: "real", nullable: true),
+                    PaymentInfo_Method = table.Column<int>(type: "int", nullable: true),
+                    PaymentInfo_Reference = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PaymentInfo_TransactionId = table.Column<int>(type: "int", nullable: true),
+                    PaymentInfo_IsReceived = table.Column<bool>(type: "bit", nullable: true),
                     Status = table.Column<int>(type: "int", nullable: false),
+                    SubState = table.Column<int>(type: "int", nullable: false),
+                    StatusHistory = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Version = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<long>(type: "bigint", nullable: false),
                     UpdatedAt = table.Column<long>(type: "bigint", nullable: false),
                     DeletedAt = table.Column<long>(type: "bigint", nullable: false),
-                    IsDeleted = table.Column<bool>(type: "bit", nullable: false),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -266,14 +293,19 @@ namespace OrderDbLib.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "OrderTag",
+                name: "Reports",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
+                    Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    DeliveryOrderId = table.Column<int>(type: "int", nullable: true),
+                    TimeOfOccurrence = table.Column<long>(type: "bigint", nullable: false),
+                    IncidentDescription = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ImpactDescription = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Resolve_Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Resolve_OrderStatus = table.Column<int>(type: "int", nullable: true),
+                    Resolve_PaymentStatus = table.Column<int>(type: "int", nullable: true),
+                    Remark = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DeliveryOrderId = table.Column<long>(type: "bigint", nullable: true),
                     Version = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<long>(type: "bigint", nullable: false),
                     UpdatedAt = table.Column<long>(type: "bigint", nullable: false),
@@ -282,12 +314,72 @@ namespace OrderDbLib.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_OrderTag", x => x.Id);
+                    table.PrimaryKey("PK_Reports", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_OrderTag_DeliveryOrders_DeliveryOrderId",
+                        name: "FK_Reports_DeliveryOrders_DeliveryOrderId",
                         column: x => x.DeliveryOrderId,
                         principalTable: "DeliveryOrders",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Tag_dos",
+                columns: table => new
+                {
+                    DeliveryOrderId = table.Column<long>(type: "bigint", nullable: false),
+                    TagId = table.Column<long>(type: "bigint", nullable: false),
+                    Id = table.Column<long>(type: "bigint", nullable: false),
+                    Version = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<long>(type: "bigint", nullable: false),
+                    UpdatedAt = table.Column<long>(type: "bigint", nullable: false),
+                    DeletedAt = table.Column<long>(type: "bigint", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Tag_dos", x => new { x.DeliveryOrderId, x.TagId });
+                    table.ForeignKey(
+                        name: "FK_Tag_dos_DeliveryOrders_DeliveryOrderId",
+                        column: x => x.DeliveryOrderId,
+                        principalTable: "DeliveryOrders",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Tag_dos_Tags_TagId",
+                        column: x => x.TagId,
+                        principalTable: "Tags",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Tag_reports",
+                columns: table => new
+                {
+                    ReportId = table.Column<long>(type: "bigint", nullable: false),
+                    TagId = table.Column<long>(type: "bigint", nullable: false),
+                    Id = table.Column<long>(type: "bigint", nullable: false),
+                    Version = table.Column<int>(type: "int", nullable: false),
+                    CreatedAt = table.Column<long>(type: "bigint", nullable: false),
+                    UpdatedAt = table.Column<long>(type: "bigint", nullable: false),
+                    DeletedAt = table.Column<long>(type: "bigint", nullable: false),
+                    IsDeleted = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Tag_reports", x => new { x.ReportId, x.TagId });
+                    table.ForeignKey(
+                        name: "FK_Tag_reports_Reports_ReportId",
+                        column: x => x.ReportId,
+                        principalTable: "Reports",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Tag_reports_Tags_TagId",
+                        column: x => x.TagId,
+                        principalTable: "Tags",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
@@ -362,14 +454,24 @@ namespace OrderDbLib.Migrations
                 filter: "[UserRefId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_OrderTag_DeliveryOrderId",
-                table: "OrderTag",
+                name: "IX_Reports_DeliveryOrderId",
+                table: "Reports",
                 column: "DeliveryOrderId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Riders_UserId",
                 table: "Riders",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tag_dos_TagId",
+                table: "Tag_dos",
+                column: "TagId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tag_reports_TagId",
+                table: "Tag_reports",
+                column: "TagId");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_AspNetUserClaims_AspNetUsers_UserId",
@@ -426,10 +528,19 @@ namespace OrderDbLib.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
-                name: "OrderTag");
+                name: "Tag_dos");
+
+            migrationBuilder.DropTable(
+                name: "Tag_reports");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
+
+            migrationBuilder.DropTable(
+                name: "Reports");
+
+            migrationBuilder.DropTable(
+                name: "Tags");
 
             migrationBuilder.DropTable(
                 name: "DeliveryOrders");
