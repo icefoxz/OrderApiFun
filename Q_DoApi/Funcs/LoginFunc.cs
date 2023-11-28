@@ -161,9 +161,13 @@ namespace Do_Api.Funcs
             var loginModel = b.Get<User_LoginDto>(0);
 
             var user = await UserManager.FindByNameAsync(loginModel.Username);
-            if (user !=null 
-                && await UserManager.IsInRoleAsync(user, Auth.Role_Rider) 
-                && await UserManager.CheckPasswordAsync(user, loginModel.Password))
+            if (user ==null)
+                return await req.WriteStringAsync("Invalid username or password.");
+
+            if (!await UserManager.CheckPasswordAsync(user, loginModel.Password))
+                return await req.WriteStringAsync("Invalid username or password.");
+
+            if (!await UserManager.IsInRoleAsync(user, Auth.Role_Rider))
                 return await req.WriteStringAsync("Invalid username or password.");
 
             var rider = await RiderManager.FindByUserIdAsync(user.Id);

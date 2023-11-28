@@ -72,9 +72,15 @@ namespace OrderApiFun.Core.Middlewares
             }
 
             var result = await TokenValidationAsync(bearerToken);
-            if (!await TokenResultUserHandlingPassAsync(context, log, result, req))
+            if (result.Result != TokenValidation.Results.Valid)
+            {
+                var message = result.Result == TokenValidation.Results.Expired
+                    ? "Token expired"
+                    : "Invalid token";
+                // 如果令牌无效，设置一个适当的响应
+                await AuthenticationFailedResponseAsync(context, req, log, message);
                 return;
-
+            }
             if (!await VerifyTokenTypeAsync(context, log, result, req, JwtTokenService.AccessTokenHeader)) return;
 
             var role = result.Principal.FindFirstValue(ClaimTypes.Role);
@@ -85,9 +91,9 @@ namespace OrderApiFun.Core.Middlewares
                 await AuthenticationFailedResponseAsync(context, req, log, message);
                 return;
             }
-            var riderId = result.Principal.FindFirstValue(Auth.RiderId);
-            if (riderId == null) return;
-            var rider = await RiderManager.FindByUserIdAsync(riderId);
+            var rId = result.Principal.FindFirstValue(Auth.RiderId);
+            if (!long.TryParse(rId, out var riderId)) return;
+            var rider = await RiderManager.FindByIdAsync(riderId);
             if (rider == null) return;
             context.Items[Auth.ContextRole] = Auth.Role_Rider;
             context.Items[Auth.RiderId] = rider.Id;

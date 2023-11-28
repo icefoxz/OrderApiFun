@@ -25,9 +25,9 @@ namespace Do_Api.Funcs
         private RiderManager RiderManager { get; }
         private UserManager<User> UserManager { get; }
 
-        public RiderDoFunc(DoService doService, 
-            UserManager<User> userManager, 
-            RiderManager riderManager, 
+        public RiderDoFunc(DoService doService,
+            UserManager<User> userManager,
+            RiderManager riderManager,
             LingauManager lingauManager)
         {
             DoService = doService;
@@ -42,7 +42,38 @@ namespace Do_Api.Funcs
             HttpRequestData req,
             FunctionContext context)
         {
-            var (funcName,bag,log)= await req.GetBagWithLogAsync(context);
+            var (funcName, bag, log) = await req.GetBagWithLogAsync(context);
+
+            var riderId = context.GetRiderId();
+            // Get the 'limit' and 'page' values from the DataBag
+            var pageSize = 10;
+            var index = 0;
+            try
+            {
+                pageSize = bag.Get<int>(0);
+                index = bag.Get<int>(1);
+            }
+            catch (Exception _)
+            {
+                return await req.WriteStringAsync(HttpStatusCode.BadRequest, "Invalid request body.");
+            }
+
+            var rider = await RiderManager.FindByIdAsync(riderId);
+            if (rider == null) return await req.WriteStringAsync("Rider not found!");
+
+            var pg = await DoService.GetPageList(pageSize, index, log,
+                d => d.Rider == null && d.Status == 0);
+            var dtoPg = pg.AdaptPageList<DeliveryOrder, DeliverOrderModel>();
+            return await req.WriteBagAsync(funcName, dtoPg);
+        }
+
+        [Function(nameof(Rider_Get_Assigned))]
+        public async Task<HttpResponseData> Rider_Get_Assigned(
+            [HttpTrigger(AuthorizationLevel.Function, "post")]
+            HttpRequestData req,
+            FunctionContext context)
+        {
+            var (funcName, bag, log) = await req.GetBagWithLogAsync(context);
 
             var riderId = context.GetRiderId();
             // Get the 'limit' and 'page' values from the DataBag
@@ -60,10 +91,62 @@ namespace Do_Api.Funcs
             var rider = await RiderManager.FindByIdAsync(riderId);
             if (rider == null) return await req.WriteStringAsync("Rider not found!");
 
-            var pg = await DoService.GetPageList(pageSize, index, log, 
-                d => d.Rider == null && d.Status == 0);
-            var dtoPg = pg.AdaptPageList<DeliveryOrder,DeliverOrderModel>();
+            var pg = await DoService.GetPageList(pageSize, index, log,
+                d => d.RiderId == riderId && d.Status > 0);
+            var dtoPg = pg.AdaptPageList<DeliveryOrder, DeliverOrderModel>();
             return await req.WriteBagAsync(funcName, dtoPg);
+        }
+
+        [Function(nameof(Rider_Get_Histories))]
+        public async Task<HttpResponseData> Rider_Get_Histories(
+            [HttpTrigger(AuthorizationLevel.Function, "post")]
+            HttpRequestData req,
+            FunctionContext context)
+        {
+            var (funcName, bag, log) = await req.GetBagWithLogAsync(context);
+
+            var riderId = context.GetRiderId();
+            // Get the 'limit' and 'page' values from the DataBag
+            var pageSize = 10;
+            var index = 0;
+            try
+            {
+                pageSize = bag.Get<int>(0);
+                index = bag.Get<int>(1);
+            }
+            catch (Exception _)
+            {
+                return await req.WriteStringAsync(HttpStatusCode.BadRequest, "Invalid request body.");
+            }
+            var rider = await RiderManager.FindByIdAsync(riderId);
+            if (rider == null) return await req.WriteStringAsync("Rider not found!");
+
+            var pg = await DoService.GetPageList(pageSize, index, log,
+                d => d.RiderId == riderId && d.Status < 0);
+            var dtoPg = pg.AdaptPageList<DeliveryOrder, DeliverOrderModel>();
+            return await req.WriteBagAsync(funcName, dtoPg);
+        }
+
+        [Function(nameof(Rider_Get_SubStates))]
+        public async Task<HttpResponseData> Rider_Get_SubStates(
+            [HttpTrigger(AuthorizationLevel.Function, "post")]
+            HttpRequestData req,
+            FunctionContext context)
+        {
+            var (funcName, bag, log) = await req.GetBagWithLogAsync(context);
+            return await req.WriteBagAsync(funcName, new object[] { DoStateMap.GetAllSubStates().ToArray() });
+        }
+        
+        [Function(nameof(Rider_AvailableStates))]
+        public async Task<HttpResponseData> Rider_AvailableStates(
+            [HttpTrigger(AuthorizationLevel.Function, "post")]
+            HttpRequestData req,
+            FunctionContext context)
+        {
+            var (funcName, bag, log) = await req.GetBagWithLogAsync(context);
+            var subState = bag.Get<int>(0);
+            var subStates = DoStateMap.GetPossibleStates(TransitionRoles.Rider, subState);
+            return await req.WriteBagAsync(funcName, new object[] { subStates.Select(s => s.StateId).ToArray() });
         }
 
         [Function(nameof(Rider_Do_Assign))]
@@ -80,7 +163,7 @@ namespace Do_Api.Funcs
                 var orderId = bag.Get<long>(0);
 
                 var rider = await RiderManager.FindByIdAsync(riderId);
-                if(rider==null) return await req.WriteStringAsync("Rider not found!");
+                if (rider == null) return await req.WriteStringAsync("Rider not found!");
                 var result = await DoService.AssignRiderAsync(orderId, rider);
                 if (!result.IsSuccess)
                     return await req.WriteStringAsync(result.Message);
@@ -102,7 +185,7 @@ namespace Do_Api.Funcs
             var (funcName, bag, log) = await req.GetBagWithLogAsync(context);
             var riderId = context.GetRiderId();
             var result = await Rider_Do_StateUpdate(bag, riderId, log);
-            if(!result.IsSuccess)return await req.WriteStringAsync(result.Message);
+            if (!result.IsSuccess) return await req.WriteStringAsync(result.Message);
             var dto = result.Data.Adapt<DeliverOrderModel>();
             return await req.WriteBagAsync(funcName, dto);
         }
