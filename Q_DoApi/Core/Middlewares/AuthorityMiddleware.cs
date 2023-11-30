@@ -1,14 +1,16 @@
-﻿using System.Data;
-using System.Net;
+﻿using System.Net;
 using System.Security.Claims;
 using Do_Api.Funcs;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.Functions.Worker.Middleware;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 using OrderApiFun.Core.Services;
 using OrderApiFun.Core.Tokens;
+using OrderDbLib;
 
 namespace OrderApiFun.Core.Middlewares
 {
@@ -20,14 +22,14 @@ namespace OrderApiFun.Core.Middlewares
         private const string RiderPrefix = "Rider";
         private const string SwaggerPrefix = "RenderSwaggerUI";
 
-        public AuthorityMiddleware(JwtTokenService jwtTokenService, RiderManager riderManager)
+        public AuthorityMiddleware(JwtTokenService jwtTokenService, IConfiguration configuration)
         {
             JwtTokenService = jwtTokenService;
-            RiderManager = riderManager;
+            Configuration = configuration;
         }
 
         private JwtTokenService JwtTokenService { get; }
-        private RiderManager RiderManager { get; }
+        private IConfiguration Configuration { get;  }
 
         //主要中间件入口,实现基于名字"前缀_功能"格式的api验证方法
         public async Task Invoke(FunctionContext context, FunctionExecutionDelegate next)
@@ -93,10 +95,13 @@ namespace OrderApiFun.Core.Middlewares
             }
             var rId = result.Principal.FindFirstValue(Auth.RiderId);
             if (!long.TryParse(rId, out var riderId)) return;
-            var rider = await RiderManager.FindByIdAsync(riderId);
-            if (rider == null) return;
+            var connString = Configuration.GetConnectionString(Config.DefaultConnectionString);
+            var op = new DbContextOptionsBuilder<OrderDbContext>();
+            await using var db = new OrderDbContext(op.UseSqlServer(connString).Options);
+            var isRiderExist = await db.Riders.AnyAsync(r => r.Id == riderId && !r.IsDeleted);
+            if (!isRiderExist) return;
             context.Items[Auth.ContextRole] = Auth.Role_Rider;
-            context.Items[Auth.RiderId] = rider.Id;
+            context.Items[Auth.RiderId] = riderId;
             await next.Invoke(context);
         }
 

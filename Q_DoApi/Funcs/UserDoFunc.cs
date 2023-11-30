@@ -44,7 +44,7 @@ public class UserDoFunc
             userId = context.GetUserId();
             pageSize = bag.Get<int>(0);
             pageIndex = bag.Get<int>(1);
-            var doPg = await GetHistoryPageList(userId, f, pageIndex, pageSize);
+            var doPg = await GetActivePageList(userId, f, pageIndex, pageSize);
             return await req.WriteBagAsync(funcName, doPg);
         }
         catch (Exception e)
@@ -178,8 +178,10 @@ public class UserDoFunc
         FunctionContext context)
     {
         var (functionName,bag,log) = await req.GetBagWithLogAsync(context);
+        var orderId = bag.Get<long>(0);
+        var subState = bag.Get<int>(1);
         var result =
-            await UseDo_StateUpdate(bag, context.GetUserId(), log);
+            await UseDo_StateUpdate(orderId, context.GetUserId(), subState, log);
         if (result.IsSuccess)
             return await req.WriteStringAsync(DataBag.Serialize(TypeAdapter.Adapt<DeliverOrderModel>(result.Data)));
         return await req.WriteStringAsync(result.Message);
@@ -194,7 +196,8 @@ public class UserDoFunc
     {
         var userId = context.GetUserId();
         var f = await req.GetBagWithLogAsync(context);
-        var result = await UseDo_StateUpdate(f.bag, userId, f.log);
+        var orderId = f.bag.Get<long>(0);
+        var result = await UseDo_StateUpdate(orderId, userId, DoSubState.SenderCancelState, f.log);
         if (!result.IsSuccess) return await req.WriteStringAsync(result.Message);
         return await ResponseDoData(req, userId, f);
     }
@@ -209,14 +212,14 @@ public class UserDoFunc
 
     private async Task<PageList<DeliverOrderModel>> GetHistoryPageList(string userId, (string functionName, DataBag bag, ILogger log) f, int pageIndex = 0, int pageSize = 20)
     {
-        var historyPl = await DoService.User_GetDeliveryOrdersAsync(userId, pageSize, pageIndex, d => d.Status >= 0, f.log);
+        var historyPl = await DoService.User_GetDeliveryOrdersAsync(userId, pageSize, pageIndex, d => d.Status < 0, f.log);
         var hpl = historyPl.AdaptPageList<DeliveryOrder, DeliverOrderModel>();
         return hpl;
     }
 
     private async Task<PageList<DeliverOrderModel>> GetActivePageList(string userId, (string functionName, DataBag bag, ILogger log) f,int pageIndex = 0,int pageSize = 50)
     {
-        var orderPl = await DoService.User_GetDeliveryOrdersAsync(userId, pageSize, pageIndex, d => d.Status < 0, f.log);
+        var orderPl = await DoService.User_GetDeliveryOrdersAsync(userId, pageSize, pageIndex, d => d.Status >= 0, f.log);
         var opl = orderPl.AdaptPageList<DeliveryOrder, DeliverOrderModel>();
         return opl;
     }
@@ -224,17 +227,15 @@ public class UserDoFunc
     /// <summary>
     /// 更新订单状态 bag[doId,subState]
     /// </summary>
-    private async Task<ResultOf<DeliveryOrder>> UseDo_StateUpdate(DataBag bag, string userId, ILogger log)
+    private async Task<ResultOf<DeliveryOrder>> UseDo_StateUpdate(long orderId, string userId,int subState, ILogger log)
     {
-        var deliveryOrderId = bag.Get<int>(0);
-        var subState = bag.Get<int>(1);
-        var order = await UserDo_Get(userId, deliveryOrderId);
+        var order = await UserDo_Get(userId, orderId);
         if (order == null)
             return ResultOf.Fail<DeliveryOrder>("Order not found.");
         return await DoService.SubState_Update(order, TransitionRoles.User, subState, log);
     }
 
-    private async Task<DeliveryOrder?> UserDo_Get(string userId, int deliveryOrderId)
+    private async Task<DeliveryOrder?> UserDo_Get(string userId, long deliveryOrderId)
     {
         var order = await DoService.GetFirstAsync(o => o.UserId == userId && o.Id == deliveryOrderId);
         return order;

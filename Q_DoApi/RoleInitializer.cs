@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using OrderDbLib;
 using OrderDbLib.Entities;
 using OrderHelperLib.Contracts;
@@ -27,13 +28,13 @@ public class RoleInitializer
 
 public class TagInitializer
 {
-    public static async Task InitializeSubStatesAsync(OrderDbContext context)
+    public static async Task InitializeSubStatesAsync(IServiceProvider sp)
     {
         // 合并所有子状态字典
         var allSubStates = DoStateMap.GetAllSubStates();
-
+        var db = sp.GetService<OrderDbContext>();
         // 获取数据库中已存在的Tag
-        var existingTags = await context.Tags
+        var existingTags = await db.Tags
             .Where(t => t.Type == DoStateMap.TagType)
             .ToListAsync();
 
@@ -42,8 +43,8 @@ public class TagInitializer
             .Select(s=>s.ToTag()).ToArray();
 
         // 只添加不存在的Tag
-        context.Tags.AddRange(tagsToAdd);
+        db.Tags.AddRange(tagsToAdd);
 
-        await context.SaveChangesAsync();
+        await db.SaveChangesAsync();
     }
 }

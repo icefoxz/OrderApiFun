@@ -24,7 +24,7 @@ var host = new HostBuilder()
         Auth.Init(c.GetValue<string>(Role_User), c.GetValue<string>(Role_Rider));
 
         // 配置数据库连接字符串
-        var connectionString = c.GetConnectionString("DefaultConnection");
+        var connectionString = c.GetConnectionString(Config.DefaultConnectionString);
         // 添加 ApplicationDbContext 服务
         s.AddDbContext<OrderDbContext>(
             op =>
@@ -55,7 +55,7 @@ var host = new HostBuilder()
         //.AddTokenProvider<JwtTokenService>(JwtTokenService.ProviderName); // 添加自定义的 JwtTokenProvider
         //.AddTokenProvider<DataProtectorTokenProvider<ApplicationUser>>("Default") // 添加内置的 DataProtectorTokenProvider
         // 注册 JwtTokenProvider
-        s.AddSingleton<JwtTokenService>();
+        s.AddScoped<JwtTokenService>();
 
         //Business Services
         s.AddScoped<DoService>();
@@ -74,6 +74,10 @@ var host = new HostBuilder()
 var roleInitializer = host.Services.GetService<RoleInitializer>();
 string[] roles = { Auth.Role_User, Auth.Role_Rider };
 await roleInitializer.ResolveRolesAsync(roles: roles);
-var db = host.Services.GetService<OrderDbContext>();
-await TagInitializer.InitializeSubStatesAsync(db);
+await TagInitializer.InitializeSubStatesAsync(host.Services);
 await host.RunAsync();
+
+public class Config
+{
+    public const string DefaultConnectionString = "DefaultConnection";
+}
