@@ -10,8 +10,6 @@ namespace OrderDbLib.Entities
         public string UserId { get; set; }
         // 执行用户
         public User User { get; set; }
-        // 标签
-        public ICollection<Tag_Do> Tag_Dos { get; set; }
         //物品信息
         public ItemInfo ItemInfo { get; set; }
         // (马来西亚)州属Id
@@ -32,17 +30,19 @@ namespace OrderDbLib.Entities
         //订单子状态
         public int SubState { get; set; }
         //订单状态历史(进程)
-        public StatusHistory[] StatusHistory { get; set; } = Array.Empty<StatusHistory>();
+        public StateSegment[] StateHistory { get; set; } = Array.Empty<StateSegment>();
+        //标签, 于订单状态进程相比, 这个是用来分析和过滤的
+        public ICollection<Tag_Do> Tag_Dos { get; set; }
         //订单报告
         public ICollection<Report> Reports { get; set; }
     }
 
-    public class StatusHistory
+    //订单状态进程, 用于记录订单的状态变化
+    public class StateSegment
     {
-        public int Status { get; set; }
+        public int SubState { get; set; }
         public DateTime Timestamp { get; set; }
-        public string Name { get; set; }
-        public string? Description { get; set; }
+        public string? Remark { get; set; }
     }
 
     public class PaymentInfo
@@ -52,7 +52,7 @@ namespace OrderDbLib.Entities
         /// </summary>
         public float Fee { get; set; }
         public float Charge { get; set; } // 价格
-        public int Method { get; set; } // 付款类型
+        public string Method { get; set; } = string.Empty; // 付款类型
         /// <summary>
         /// 付款Reference,如果骑手代收将会是骑手Id, 如果是在线支付将会是支付平台的Reference, 如果是用户扣账将会是用户Id
         /// </summary>
@@ -60,7 +60,7 @@ namespace OrderDbLib.Entities
         /// <summary>
         /// 付款TransactionId
         /// </summary>
-        public int TransactionId { get; set; }
+        public string TransactionId { get; set; } = string.Empty;
         public bool IsReceived { get; set; } // 是否已经完成付款
     }
 

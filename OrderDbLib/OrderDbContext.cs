@@ -53,9 +53,9 @@ namespace OrderDbLib
                 i.OwnsOne(o => o.StartLocation);
                 i.OwnsOne(o => o.EndLocation);
             });
-            b.Entity<DeliveryOrder>().Property(d => d.StatusHistory)
+            b.Entity<DeliveryOrder>().Property(d => d.StateHistory)
                 .HasConversion(h => JsonConvert.SerializeObject(h),
-                    s => JsonConvert.DeserializeObject<StatusHistory[]>(s) ?? Array.Empty<StatusHistory>());
+                    s => JsonConvert.DeserializeObject<StateSegment[]>(s) ?? Array.Empty<StateSegment>());
             b.Entity<DeliveryOrder>().OwnsOne(d => d.PaymentInfo);
         }
 
