@@ -85,7 +85,7 @@ namespace OrderApiFun.Core.Middlewares
             }
             if (!await VerifyTokenTypeAsync(context, log, result, req, JwtTokenService.AccessTokenHeader)) return;
 
-            var role = result.Principal.FindFirstValue(ClaimTypes.Role);
+            var role = JwtTokenService.GetRole(result);
             if (role != Auth.Role_Rider)
             {
                 var message = "Token role not matched!";
@@ -93,7 +93,7 @@ namespace OrderApiFun.Core.Middlewares
                 await AuthenticationFailedResponseAsync(context, req, log, message);
                 return;
             }
-            var rId = result.Principal.FindFirstValue(Auth.RiderId);
+            var rId = JwtTokenService.GetRiderId(result);
             if (!long.TryParse(rId, out var riderId)) return;
             var connString = Configuration.GetConnectionString(Config.DefaultConnectionString);
             var op = new DbContextOptionsBuilder<OrderDbContext>();
@@ -130,7 +130,7 @@ namespace OrderApiFun.Core.Middlewares
         }
 
         //处理基本token逻辑,把用户Id写入Context.Items, 并且验证token_type
-        private static async Task<bool> TokenResultUserHandlingPassAsync(FunctionContext context, ILogger<AuthorityMiddleware> log, TokenValidation result,
+        private async Task<bool> TokenResultUserHandlingPassAsync(FunctionContext context, ILogger<AuthorityMiddleware> log, TokenValidation result,
             HttpRequestData? req)
         {
             if (result.Result != TokenValidation.Results.Valid)
@@ -143,7 +143,7 @@ namespace OrderApiFun.Core.Middlewares
                 return false;
             }
 
-            var role = result.Principal.FindFirstValue(ClaimTypes.Role);
+            var role = JwtTokenService.GetRole(result);
             if (role != Auth.Role_User)
             {
                 var message = "Token role not matched!";
@@ -152,7 +152,7 @@ namespace OrderApiFun.Core.Middlewares
                 return false;
             }
             context.Items[Auth.ContextRole] = Auth.Role_User;
-            context.Items[Auth.UserId] = result.Principal.Identity.Name;
+            context.Items[Auth.UserId] = JwtTokenService.GetUserId(result);
             return true;
         }
 

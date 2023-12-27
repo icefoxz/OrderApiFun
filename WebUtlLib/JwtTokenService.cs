@@ -19,27 +19,20 @@ public class JwtTokenService
     public const string RefreshTokenHeader = "refresh_token";
     public const string AccessTokenHeader = "access_token";
     private static byte[] KeyInBytes { get; } = Encoding.ASCII.GetBytes(JwtKey);
-
-    private SymmetricSecurityKey SymmetricSecurityKey { get; } = new SymmetricSecurityKey(KeyInBytes);
+    
+    private static SymmetricSecurityKey SymmetricSecurityKey { get; } = new SymmetricSecurityKey(KeyInBytes);
     public JwtSecurityTokenHandler JwtSecurityTokenHandler { get; } = new JwtSecurityTokenHandler();
-    private TokenValidationParameters TokenValidationParameters
+    public static TokenValidationParameters TokenValidationParameters { get; } = new()
     {
-        get
-        {
-            var validationParameters = new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = SymmetricSecurityKey,
-                ValidateIssuer = true,
-                ValidIssuer = JwtIssuer,
-                ValidateAudience = true,
-                ValidAudience = JwtAudience,
-                ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero
-            };
-            return validationParameters;
-        }
-    }
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = SymmetricSecurityKey,
+        ValidateIssuer = true,
+        ValidIssuer = JwtIssuer,
+        ValidateAudience = true,
+        ValidAudience = JwtAudience,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
 
     public string GenerateUserRefreshToken(User user) => GenerateRefreshToken(user);
 
@@ -97,6 +90,7 @@ public class JwtTokenService
     {
         var claims = new List<Claim>
         {
+            new(ClaimTypes.NameIdentifier, user.Id),
             new(ClaimTypes.Name, user.Id),//注意accessToken记录的是userId而非username
             new(TokenType, AccessTokenHeader),
             // ... other claims ...
@@ -136,4 +130,8 @@ public class JwtTokenService
             return Task.FromResult(TokenValidation.Error(e.Message));
         }
     }
+
+    public string? GetRole(TokenValidation tokenValidation) => tokenValidation.Principal.FindFirstValue(ClaimTypes.Role);
+    public string? GetRiderId(TokenValidation result) => result.Principal.FindFirstValue(Auth.RiderId);
+    public string? GetUserId(TokenValidation result) => result.Principal.Identity?.Name;
 }

@@ -1,12 +1,10 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using OrderDbLib;
 using OrderDbLib.Entities;
-using Q_DoApi.Core.Utls;
 using WebUtlLib;
 
-namespace OrderApiFun.Core.Services;
+namespace Q_DoApi.Core.Services;
 
 public class LingauManager
 {
@@ -16,14 +14,31 @@ public class LingauManager
         Db = db;
     }
     //更新lingau
-    public async Task UpdateLingauBalanceAsync(string userId, float amount,ILogger log)
+    public async Task<ResultOf<Lingau>> UpdateLingauBalanceAsync(string userId, float amount, ILogger log, bool saveChange = true)
     {
         var user = await GetUserAsync(userId);
+        if (user == null)
+        {
+            log.Event($"User[{userId}] not found!");
+            return ResultOf.Fail<Lingau>("User not found!");
+        }
+
+        if (user.Lingau.Credit < amount)
+        {
+            log.Event($"User[{userId}] insufficient balance!");
+            return ResultOf.Fail<Lingau>("Insufficient balance!");
+        }
+
         var lastCredit = user.Lingau.Credit;
         user.Lingau.Credit += amount;
-        log.Event($"Amount : {amount}, User[{userId}].{lastCredit} to {user.Lingau.Credit}");
-        await Db.SaveChangesAsync();
+        if(saveChange)
+        {
+            log.Event($"Amount : {amount}, User[{userId}].{lastCredit} to {user.Lingau.Credit}");
+            await Db.SaveChangesAsync();
+        }
+        return ResultOf.Success(user.Lingau);
     }
+
     //lingau转账
     public async Task<ResultOf<User>> TransferLingauAsync(string fromUserId, string toUserId, float amount, ILogger log)
     {
@@ -56,5 +71,4 @@ public class LingauManager
     {
         return await Db.Users.Include(u => u.Lingau).FirstOrDefaultAsync(u => u.Id == userId && !u.IsDeleted);
     }
-
 }

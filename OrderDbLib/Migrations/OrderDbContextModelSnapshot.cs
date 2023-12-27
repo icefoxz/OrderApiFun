@@ -205,7 +205,7 @@ namespace OrderDbLib.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("DeliveryOrders");
+                    b.ToTable("DeliveryOrders", (string)null);
                 });
 
             modelBuilder.Entity("OrderDbLib.Entities.Lingau", b =>
@@ -242,7 +242,7 @@ namespace OrderDbLib.Migrations
                         .IsUnique()
                         .HasFilter("[UserRefId] IS NOT NULL");
 
-                    b.ToTable("Lingaus");
+                    b.ToTable("Lingaus", (string)null);
                 });
 
             modelBuilder.Entity("OrderDbLib.Entities.Report", b =>
@@ -287,7 +287,7 @@ namespace OrderDbLib.Migrations
 
                     b.HasIndex("DeliveryOrderId");
 
-                    b.ToTable("Reports");
+                    b.ToTable("Reports", (string)null);
                 });
 
             modelBuilder.Entity("OrderDbLib.Entities.Rider", b =>
@@ -329,7 +329,7 @@ namespace OrderDbLib.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Riders");
+                    b.ToTable("Riders", (string)null);
                 });
 
             modelBuilder.Entity("OrderDbLib.Entities.Tag", b =>
@@ -370,7 +370,7 @@ namespace OrderDbLib.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Tags");
+                    b.ToTable("Tags", (string)null);
                 });
 
             modelBuilder.Entity("OrderDbLib.Entities.Tag_Do", b =>
@@ -403,7 +403,7 @@ namespace OrderDbLib.Migrations
 
                     b.HasIndex("TagId");
 
-                    b.ToTable("Tag_dos");
+                    b.ToTable("Tag_dos", (string)null);
                 });
 
             modelBuilder.Entity("OrderDbLib.Entities.Tag_Report", b =>
@@ -436,7 +436,7 @@ namespace OrderDbLib.Migrations
 
                     b.HasIndex("TagId");
 
-                    b.ToTable("Tag_reports");
+                    b.ToTable("Tag_reports", (string)null);
                 });
 
             modelBuilder.Entity("OrderDbLib.Entities.User", b =>
@@ -596,7 +596,7 @@ namespace OrderDbLib.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.OwnsOne("OrderDbLib.Entities.DeliveryInfo", "DeliveryInfo", b1 =>
+                    b.OwnsOne("OrderDbLib.Entities.DeliveryOrder.DeliveryInfo#OrderDbLib.Entities.DeliveryInfo", "DeliveryInfo", b1 =>
                         {
                             b1.Property<long>("DeliveryOrderId")
                                 .HasColumnType("bigint");
@@ -606,12 +606,12 @@ namespace OrderDbLib.Migrations
 
                             b1.HasKey("DeliveryOrderId");
 
-                            b1.ToTable("DeliveryOrders");
+                            b1.ToTable("DeliveryOrders", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("DeliveryOrderId");
 
-                            b1.OwnsOne("OrderDbLib.Entities.Location", "EndLocation", b2 =>
+                            b1.OwnsOne("OrderDbLib.Entities.DeliveryOrder.DeliveryInfo#OrderDbLib.Entities.DeliveryInfo.EndLocation#OrderDbLib.Entities.Location", "EndLocation", b2 =>
                                 {
                                     b2.Property<long>("DeliveryInfoDeliveryOrderId")
                                         .HasColumnType("bigint");
@@ -630,13 +630,13 @@ namespace OrderDbLib.Migrations
 
                                     b2.HasKey("DeliveryInfoDeliveryOrderId");
 
-                                    b2.ToTable("DeliveryOrders");
+                                    b2.ToTable("DeliveryOrders", (string)null);
 
                                     b2.WithOwner()
                                         .HasForeignKey("DeliveryInfoDeliveryOrderId");
                                 });
 
-                            b1.OwnsOne("OrderDbLib.Entities.Location", "StartLocation", b2 =>
+                            b1.OwnsOne("OrderDbLib.Entities.DeliveryOrder.DeliveryInfo#OrderDbLib.Entities.DeliveryInfo.StartLocation#OrderDbLib.Entities.Location", "StartLocation", b2 =>
                                 {
                                     b2.Property<long>("DeliveryInfoDeliveryOrderId")
                                         .HasColumnType("bigint");
@@ -655,7 +655,7 @@ namespace OrderDbLib.Migrations
 
                                     b2.HasKey("DeliveryInfoDeliveryOrderId");
 
-                                    b2.ToTable("DeliveryOrders");
+                                    b2.ToTable("DeliveryOrders", (string)null);
 
                                     b2.WithOwner()
                                         .HasForeignKey("DeliveryInfoDeliveryOrderId");
@@ -668,7 +668,7 @@ namespace OrderDbLib.Migrations
                                 .IsRequired();
                         });
 
-                    b.OwnsOne("OrderDbLib.Entities.ItemInfo", "ItemInfo", b1 =>
+                    b.OwnsOne("OrderDbLib.Entities.DeliveryOrder.ItemInfo#OrderDbLib.Entities.ItemInfo", "ItemInfo", b1 =>
                         {
                             b1.Property<long>("DeliveryOrderId")
                                 .HasColumnType("bigint");
@@ -696,13 +696,13 @@ namespace OrderDbLib.Migrations
 
                             b1.HasKey("DeliveryOrderId");
 
-                            b1.ToTable("DeliveryOrders");
+                            b1.ToTable("DeliveryOrders", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("DeliveryOrderId");
                         });
 
-                    b.OwnsOne("OrderDbLib.Entities.PaymentInfo", "PaymentInfo", b1 =>
+                    b.OwnsOne("OrderDbLib.Entities.DeliveryOrder.PaymentInfo#OrderDbLib.Entities.PaymentInfo", "PaymentInfo", b1 =>
                         {
                             b1.Property<long>("DeliveryOrderId")
                                 .HasColumnType("bigint");
@@ -729,13 +729,13 @@ namespace OrderDbLib.Migrations
 
                             b1.HasKey("DeliveryOrderId");
 
-                            b1.ToTable("DeliveryOrders");
+                            b1.ToTable("DeliveryOrders", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("DeliveryOrderId");
                         });
 
-                    b.OwnsOne("OrderDbLib.Entities.ReceiverInfo", "ReceiverInfo", b1 =>
+                    b.OwnsOne("OrderDbLib.Entities.DeliveryOrder.ReceiverInfo#OrderDbLib.Entities.ReceiverInfo", "ReceiverInfo", b1 =>
                         {
                             b1.Property<long>("DeliveryOrderId")
                                 .HasColumnType("bigint");
@@ -759,7 +759,7 @@ namespace OrderDbLib.Migrations
 
                             b1.HasIndex("UserId");
 
-                            b1.ToTable("DeliveryOrders");
+                            b1.ToTable("DeliveryOrders", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("DeliveryOrderId");
@@ -771,7 +771,7 @@ namespace OrderDbLib.Migrations
                             b1.Navigation("User");
                         });
 
-                    b.OwnsOne("OrderDbLib.Entities.SenderInfo", "SenderInfo", b1 =>
+                    b.OwnsOne("OrderDbLib.Entities.DeliveryOrder.SenderInfo#OrderDbLib.Entities.SenderInfo", "SenderInfo", b1 =>
                         {
                             b1.Property<long>("DeliveryOrderId")
                                 .HasColumnType("bigint");
@@ -795,7 +795,7 @@ namespace OrderDbLib.Migrations
 
                             b1.HasIndex("UserId");
 
-                            b1.ToTable("DeliveryOrders");
+                            b1.ToTable("DeliveryOrders", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("DeliveryOrderId");
@@ -840,7 +840,7 @@ namespace OrderDbLib.Migrations
                         .WithMany("Reports")
                         .HasForeignKey("DeliveryOrderId");
 
-                    b.OwnsOne("OrderDbLib.Entities.ReportResolve", "Resolve", b1 =>
+                    b.OwnsOne("OrderDbLib.Entities.Report.Resolve#OrderDbLib.Entities.ReportResolve", "Resolve", b1 =>
                         {
                             b1.Property<long>("ReportId")
                                 .HasColumnType("bigint");
@@ -857,7 +857,7 @@ namespace OrderDbLib.Migrations
 
                             b1.HasKey("ReportId");
 
-                            b1.ToTable("Reports");
+                            b1.ToTable("Reports", (string)null);
 
                             b1.WithOwner()
                                 .HasForeignKey("ReportId");

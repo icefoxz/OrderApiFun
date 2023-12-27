@@ -1,11 +1,14 @@
 ﻿using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
 
-namespace Q_DoApi.Core.Utls
+namespace WebUtlLib
 {
-    internal static class LoggerExtension
+    public static class LoggerExtension
     {
-        public static void Event(this ILogger? logger, string message, [CallerMemberName] string? method = null)
+        public static void Event(this ILogger? logger, [CallerMemberName] string? method = null) =>
+            logger?.EventLog("Invoke!", method);
+
+        public static void EventLog(this ILogger? logger, string? message,[CallerMemberName]string? method = null)
         {
             var formattedMessage = $"{method}(): {message}";
             logger?.LogInformation(formattedMessage);

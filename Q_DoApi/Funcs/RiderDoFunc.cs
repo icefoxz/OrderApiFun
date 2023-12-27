@@ -10,10 +10,11 @@ using OrderHelperLib;
 using OrderHelperLib.Contracts;
 using OrderHelperLib.Dtos.DeliveryOrders;
 using Q_DoApi.Core.Extensions;
+using Q_DoApi.Core.Services;
 using Utls;
 using WebUtlLib;
 
-namespace Do_Api.Funcs
+namespace Q_DoApi.Funcs
 {
     public class RiderDoFunc
     {
@@ -58,7 +59,7 @@ namespace Do_Api.Funcs
             var rider = await RiderManager.FindByIdAsync(riderId);
             if (rider == null) return await req.WriteStringAsync("Rider not found!");
 
-            var pg = await DoService.GetPageList(pageSize, index, log,
+            var pg = await DoService.DoPage_GetAsync(pageSize, index, log,
                 d => d.Rider == null && d.Status == 0);
             var dtoPg = pg.AdaptPageList<DeliveryOrder, DeliverOrderModel>();
             return await req.WriteBagAsync(funcName, dtoPg);
@@ -88,7 +89,7 @@ namespace Do_Api.Funcs
             var rider = await RiderManager.FindByIdAsync(riderId);
             if (rider == null) return await req.WriteStringAsync("Rider not found!");
 
-            var pg = await DoService.GetPageList(pageSize, index, log,
+            var pg = await DoService.DoPage_GetAsync(pageSize, index, log,
                 d => d.RiderId == riderId && d.Status > 0);
             var dtoPg = pg.AdaptPageList<DeliveryOrder, DeliverOrderModel>();
             return await req.WriteBagAsync(funcName, dtoPg);
@@ -118,7 +119,7 @@ namespace Do_Api.Funcs
             var rider = await RiderManager.FindByIdAsync(riderId);
             if (rider == null) return await req.WriteStringAsync("Rider not found!");
 
-            var pg = await DoService.GetPageList(pageSize, index, log,
+            var pg = await DoService.DoPage_GetAsync(pageSize, index, log,
                 d => d.RiderId == riderId && d.Status < 0);
             var dtoPg = pg.AdaptPageList<DeliveryOrder, DeliverOrderModel>();
             return await req.WriteBagAsync(funcName, dtoPg);
@@ -161,9 +162,11 @@ namespace Do_Api.Funcs
 
                 var rider = await RiderManager.FindByIdAsync(riderId);
                 if (rider == null) return await req.WriteStringAsync("Rider not found!");
-                var result = await DoService.AssignRiderAsync(orderId, rider);
+                var result = await DoService.Do_Rider_AssignAsync(orderId, rider);
                 if (!result.IsSuccess)
                     return await req.WriteStringAsync(result.Message);
+
+                SignalRCall.Update_Do_Call(orderId, log);
                 return await req.WriteBagAsync(funcName, result.Data.Adapt<DeliverOrderModel>());
             }
             catch (Exception ex)
@@ -183,6 +186,7 @@ namespace Do_Api.Funcs
             var riderId = context.GetRiderId();
             var result = await Rider_Do_StateUpdate(bag, riderId, log);
             if (!result.IsSuccess) return await req.WriteStringAsync(result.Message);
+            SignalRCall.Update_Do_Call(result.Data.Id, log);
             var dto = result.Data.Adapt<DeliverOrderModel>();
             return await req.WriteBagAsync(funcName, dto);
         }
@@ -197,6 +201,8 @@ namespace Do_Api.Funcs
             var (functionName, bag, log) = await req.GetBagWithLogAsync(context);
             var result = await Rider_Do_StateUpdate(bag, riderId, log);
             if (!result.IsSuccess) return await req.WriteStringAsync(result.Message);
+
+            SignalRCall.Update_Do_Call(result.Data.Id, log);
             return await req.WriteBagAsync(functionName, result.Data.Adapt<DeliverOrderModel>());
         }
 
@@ -207,10 +213,10 @@ namespace Do_Api.Funcs
         {
             var deliveryOrderId = bag.Get<int>(0);
             var subState = bag.Get<int>(1);
-            var order = await DoService.GetFirstAsync(o => o.Id == deliveryOrderId && o.RiderId == riderId);
+            var order = await DoService.Do_FirstAsync(o => o.Id == deliveryOrderId && o.RiderId == riderId);
             if (order == null)
                 return ResultOf.Fail<DeliveryOrder>("Order not found!");
-            return await DoService.SubState_Update(order, TransitionRoles.Rider, subState, log);
+            return await DoService.Do_SubState_Update(order, TransitionRoles.Rider, subState, log);
         }
     }
 }

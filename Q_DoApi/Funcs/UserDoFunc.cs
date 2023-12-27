@@ -3,16 +3,15 @@ using Mapster;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
-using OrderApiFun.Core.Middlewares;
 using OrderApiFun.Core.Services;
 using OrderDbLib.Entities;
 using OrderHelperLib;
 using OrderHelperLib.Contracts;
 using OrderHelperLib.Dtos.DeliveryOrders;
 using OrderHelperLib.Dtos.Lingaus;
-using OrderHelperLib.Req_Models.Users;
 using Q_DoApi.Core.Extensions;
-using Q_DoApi.DtoMapping;
+using Q_DoApi.Core.Services;
+using Q_DoApi.Core.Utls;
 using Utls;
 using WebUtlLib;
 
@@ -96,14 +95,8 @@ public class UserDoFunc
         HttpRequestData req,
         FunctionContext context)
     {
-        var log = context.GetLogger(nameof(User_Do_Create));
-        var bag = await req.GetBagAsync();
-        //test Instance:
-        //var dto = InstanceTestDeliverDto();
-        //log.LogWarning(Json.Serialize(dto));
-        //throw new NotImplementedException();
-        log.LogInformation("C# HTTP trigger function processed a request.");
-        var userId = context.Items[Auth.UserId].ToString();
+        var (funcName, bag, log) = await req.GetBagWithLogAsync(context);
+        var userId = context.GetUserId();
         // Deserialize the request body to DeliveryOrder
         DeliverOrderModel? orderDto = null;
         try
@@ -112,38 +105,17 @@ public class UserDoFunc
         }
         catch (Exception e)
         {
-            log.LogWarning($"Invalid request body.\n{e}");
-            var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-            await badRequestResponse.WriteStringAsync("Invalid request body.");
-            return badRequestResponse;
+            log.Event($"Invalid request body.\n{e}");
+            return await req.WriteStringAsync("Invalid request body.");
         }
-
-        if (!MyPhone.VerifyPhoneNumber(orderDto.SenderInfo.PhoneNumber))
-        {
-            log.LogWarning("Invalid sender phone number.");
-            var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-            await badRequestResponse.WriteStringAsync("Invalid sender phone number.");
-            return badRequestResponse;
-        }
-
-        if (!MyPhone.VerifyPhoneNumber(orderDto.ReceiverInfo.PhoneNumber))
-        {
-            log.LogWarning("Invalid receiver phone number.");
-            var badRequestResponse = req.CreateResponse(HttpStatusCode.BadRequest);
-            await badRequestResponse.WriteStringAsync("Invalid receiver phone number.");
-            return badRequestResponse;
-        }
-
-        // Add the new order to the database using the DeliveryOrderService
-        var newDo = await DoService.CreateDeliveryOrderAsync(userId, orderDto, log);
-        var createdResponse = req.CreateResponse(HttpStatusCode.Created);
-        //createdResponse.Headers.Add("Location", $"deliveryorder/{newOrder.Id}");
-        await createdResponse.WriteStringAsync(DataBag.Serialize(newDo.Adapt<DeliverOrderModel>()));
-        return createdResponse;
+        var result = await DoService.Do_CreateAsync(userId, orderDto, log);
+        if (!result.IsSuccess) return await req.WriteStringAsync(result.Message);
+        SignalRCall.Update_Do_Call(result.Data.Id, log);
+        return await req.WriteBagAsync(funcName, result.Data.Adapt<DeliverOrderModel>());
     }
 
-    [Function(nameof(User_Do_PayByCredit))]
-    public async Task<HttpResponseData> User_Do_PayByCredit(
+    [Function(nameof(User_DoPay_Credit))]
+    public async Task<HttpResponseData> User_DoPay_Credit(
         [HttpTrigger(AuthorizationLevel.Function, "post")]
         HttpRequestData req,
         FunctionContext context)
@@ -155,20 +127,69 @@ public class UserDoFunc
         try
         {
             var deliveryOrderId = bag.Get<int>(0);
-            order = await UserDo_Get(userId, deliveryOrderId);
+            var result = await DoService.DoPay_ByLingau(userId, deliveryOrderId, log);
+            if (!result.IsSuccess)
+                return await req.WriteStringAsync(result.Message);
+
+            SignalRCall.Update_Do_Call(deliveryOrderId, log);
+            return await req.WriteBagAsync(funcName, result.Data.Adapt<LingauModel>());
         }
         catch (Exception e)
         {
             log.LogWarning($"Invalid request body.\n{e}");
             return await req.WriteStringAsync(HttpStatusCode.BadRequest, "Invalid request body.");
         }
+    }    
+    
+    [Function(nameof(User_Do_GetPrice))]
+    public async Task<HttpResponseData> User_Do_GetPrice(
+        [HttpTrigger(AuthorizationLevel.Function, "post")]
+        HttpRequestData req,
+        FunctionContext context)
+    {
+        var (funcName,bag,log) = await req.GetBagWithLogAsync(context);
+        // Retrieve the request body
+        try
+        {
+            var order = bag.Get<DeliverOrderModel>(0);
+            var result = await DoService.Do_GetPrice(order, log);
+            if (!result.IsSuccess)
+                return await req.WriteStringAsync(result.Message);
+            var dto = result.Data;
+            return await req.WriteBagAsync(funcName, dto);
+        }
+        catch (Exception e)
+        {
+            log.LogWarning($"Invalid request body.\n{e}");
+            return await req.WriteStringAsync(HttpStatusCode.BadRequest, "Invalid request body.");
+        }
+    }    
+    
+    [Function(nameof(User_DoPay_Rider))]
+    public async Task<HttpResponseData> User_DoPay_Rider(
+        [HttpTrigger(AuthorizationLevel.Function, "post")]
+        HttpRequestData req,
+        FunctionContext context)
+    {
+        var (funcName,bag,log) = await req.GetBagWithLogAsync(context);
+        // Retrieve the request body
+        var userId = context.GetUserId();
+        DeliveryOrder? order;
+        try
+        {
+            var deliveryOrderId = bag.Get<long>(0);
+            var result = await DoService.DoPay_RiderCollect(userId, deliveryOrderId, log);
+            if (!result.IsSuccess)
+                return await req.WriteStringAsync(result.Message);
 
-        var userLingau = await LingauManager.GetLingauAsync(userId);
-        if (order.PaymentInfo.Charge > userLingau.Credit)
-            return await req.WriteStringAsync("Insufficient Lingau.");
-
-        await DoService.PayDeliveryOrderByLingauAsync(userId, order, log);
-        return await req.WriteStringAsync(DataBag.Serialize(userLingau.Adapt<LingauModel>()));
+            SignalRCall.Update_Do_Call(deliveryOrderId, log);
+            return await req.WriteBagAsync(funcName, result.Data.Adapt<DeliverOrderModel>());
+        }
+        catch (Exception e)
+        {
+            log.LogWarning($"Invalid request body.\n{e}");
+            return await req.WriteStringAsync(HttpStatusCode.BadRequest, "Invalid request body.");
+        }
     }
 
     [Function(nameof(User_Do_StatusUpdate))]
@@ -183,7 +204,9 @@ public class UserDoFunc
         var result =
             await UseDo_StateUpdate(orderId, context.GetUserId(), subState, log);
         if (result.IsSuccess)
-            return await req.WriteStringAsync(DataBag.Serialize(TypeAdapter.Adapt<DeliverOrderModel>(result.Data)));
+            return await req.WriteBagAsync(functionName, TypeAdapter.Adapt<DeliverOrderModel>(result.Data));
+
+        SignalRCall.Update_Do_Call(orderId, log);
         return await req.WriteStringAsync(result.Message);
 
     }
@@ -195,31 +218,25 @@ public class UserDoFunc
         FunctionContext context)
     {
         var userId = context.GetUserId();
-        var f = await req.GetBagWithLogAsync(context);
-        var orderId = f.bag.Get<long>(0);
-        var result = await UseDo_StateUpdate(orderId, userId, DoSubState.SenderCancelState, f.log);
+        var (functionName, b, log) = await req.GetBagWithLogAsync(context);
+        var orderId = b.Get<long>(0);
+        var result = await UseDo_StateUpdate(orderId, userId, DoSubState.SenderCancelState, log);
         if (!result.IsSuccess) return await req.WriteStringAsync(result.Message);
-        return await ResponseDoData(req, userId, f);
-    }
 
-    //返回Order和History更新
-    private async Task<HttpResponseData> ResponseDoData(HttpRequestData req, string userId, (string functionName, DataBag bag, ILogger log) f)
-    {
-        var opl = await GetActivePageList(userId, f);
-        var hpl = await GetHistoryPageList(userId, f);
-        return await req.WriteStringAsync(DataBag.SerializeWithName(f.functionName, opl, hpl));
+        SignalRCall.Update_Do_Call(orderId, log);
+        return await req.WriteBagAsync(functionName, result.Data.Adapt<DeliverOrderModel>());
     }
 
     private async Task<PageList<DeliverOrderModel>> GetHistoryPageList(string userId, (string functionName, DataBag bag, ILogger log) f, int pageIndex = 0, int pageSize = 20)
     {
-        var historyPl = await DoService.User_GetDeliveryOrdersAsync(userId, pageSize, pageIndex, d => d.Status < 0, f.log);
+        var historyPl = await DoService.User_DoPage_GetAsync(userId, pageSize, pageIndex, d => d.Status < 0, f.log);
         var hpl = historyPl.AdaptPageList<DeliveryOrder, DeliverOrderModel>();
         return hpl;
     }
 
     private async Task<PageList<DeliverOrderModel>> GetActivePageList(string userId, (string functionName, DataBag bag, ILogger log) f,int pageIndex = 0,int pageSize = 50)
     {
-        var orderPl = await DoService.User_GetDeliveryOrdersAsync(userId, pageSize, pageIndex, d => d.Status >= 0, f.log);
+        var orderPl = await DoService.User_DoPage_GetAsync(userId, pageSize, pageIndex, d => d.Status >= 0, f.log);
         var opl = orderPl.AdaptPageList<DeliveryOrder, DeliverOrderModel>();
         return opl;
     }
@@ -232,12 +249,12 @@ public class UserDoFunc
         var order = await UserDo_Get(userId, orderId);
         if (order == null)
             return ResultOf.Fail<DeliveryOrder>("Order not found.");
-        return await DoService.SubState_Update(order, TransitionRoles.User, subState, log);
+        return await DoService.Do_SubState_Update(order, TransitionRoles.User, subState, log);
     }
 
     private async Task<DeliveryOrder?> UserDo_Get(string userId, long deliveryOrderId)
     {
-        var order = await DoService.GetFirstAsync(o => o.UserId == userId && o.Id == deliveryOrderId);
+        var order = await DoService.Do_FirstAsync(o => o.UserId == userId && o.Id == deliveryOrderId);
         return order;
     }
 }

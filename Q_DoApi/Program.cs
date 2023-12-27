@@ -10,8 +10,6 @@ using OrderDbLib;
 using OrderDbLib.Entities;
 using Q_DoApi.Core.Services;
 
-const string Role_User = "Role_User";
-const string Role_Rider = "Role_Rider";
 var host = new HostBuilder()
     .ConfigureFunctionsWebApplication(app =>
     {
@@ -21,8 +19,6 @@ var host = new HostBuilder()
     {
         var c = b.Configuration;
 
-        Auth.Init(c.GetValue<string>(Role_User), c.GetValue<string>(Role_Rider));
-
         // 配置数据库连接字符串
         var connectionString = c.GetConnectionString(Config.DefaultConnectionString);
         // 添加 ApplicationDbContext 服务
@@ -31,6 +27,9 @@ var host = new HostBuilder()
                 //op.UseSqlite("Data Source=E:\\test.db")
                 op.UseSqlServer(connectionString)
             );
+
+        var signalRServerUrl = c[Config.SignalRServerUrl];
+        SignalRCall.Init(signalRServerUrl);
 
         //Middleware
         //s.AddHttpContextAccessor();//Middleware support MUST!
@@ -80,4 +79,5 @@ await host.RunAsync();
 public class Config
 {
     public const string DefaultConnectionString = "DefaultConnection";
+    public const string SignalRServerUrl = "SignalRServerUrl";
 }

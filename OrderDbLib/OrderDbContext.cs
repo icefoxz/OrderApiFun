@@ -1,6 +1,6 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Newtonsoft.Json;
 using OrderDbLib.Entities;
 
@@ -54,9 +54,25 @@ namespace OrderDbLib
                 i.OwnsOne(o => o.EndLocation);
             });
             b.Entity<DeliveryOrder>().Property(d => d.StateHistory)
-                .HasConversion(h => JsonConvert.SerializeObject(h),
-                    s => JsonConvert.DeserializeObject<StateSegment[]>(s) ?? Array.Empty<StateSegment>());
+                .HasConversion(
+                    h => JsonConvert.SerializeObject(h),
+                    s => JsonConvert.DeserializeObject<StateSegment[]>(s) ?? Array.Empty<StateSegment>())
+                .Metadata.SetValueComparer(new ValueComparer<StateSegment[]>(
+                    (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
+                    c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+                    c => c.Select(CloneStateSegment).ToArray()));
             b.Entity<DeliveryOrder>().OwnsOne(d => d.PaymentInfo);
+        }
+
+        private static StateSegment CloneStateSegment(StateSegment s)
+        {
+            return new StateSegment
+            {
+                ImageUrl = s.ImageUrl,
+                Remark = s.Remark,
+                SubState = s.SubState,
+                Timestamp = s.Timestamp
+            };
         }
 
         // 多对多关系配置
@@ -87,7 +103,7 @@ namespace OrderDbLib
 
 
         //重写SaveChangesAsync方法并地中调用UpdateFileTimeStamp()
-        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             // 获取所有已更改的实体
             var modifiedEntries = ChangeTracker.Entries()
@@ -95,14 +111,14 @@ namespace OrderDbLib
 
             foreach (var entry in modifiedEntries)
             {
-                if (entry.Entity is EntityBase<IConvertible> entityBase)
+                if (entry.Entity is IEntity entityBase)
                 {
                     // 调用UpdateFileTimeStamp()方法
                     entityBase.UpdateFileTimeStamp();
                 }
             }
             // 调用基类的SaveChangesAsync来实际保存更改
-            return await base.SaveChangesAsync(cancellationToken);
+            return base.SaveChangesAsync(cancellationToken);
         }
     }
 }

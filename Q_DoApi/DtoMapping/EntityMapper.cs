@@ -16,7 +16,8 @@ public class EntityMapper
             .Ignore(d => d.UserId)
             .Ignore(d => d.SenderInfo)
             .Ignore(d => d.ReceiverInfo.User)
-            .Ignore(d => d.ReceiverInfo.UserId);
+            .Ignore(d => d.ReceiverInfo.UserId)
+            .Map(d => d.StateHistory, s => s.StateHistory ?? Array.Empty<StateSegmentModel>());
             
         return Config;
     }

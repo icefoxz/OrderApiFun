@@ -1,4 +1,5 @@
 using System.Net;
+using Mapster;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
@@ -6,26 +7,31 @@ using OrderApiFun.Core.Middlewares;
 using OrderApiFun.Core.Services;
 using OrderDbLib.Entities;
 using OrderHelperLib;
+using OrderHelperLib.Dtos.Lingaus;
 using OrderHelperLib.Dtos.Users;
 using OrderHelperLib.Req_Models.Users;
 using OrderHelperLib.Results;
 using Q_DoApi.Core.Extensions;
+using Q_DoApi.Core.Services;
 using Q_DoApi.Core.Utls;
 using Utls;
+using WebUtlLib;
 
 namespace Do_Api.Funcs
 {
     public class LoginFunc
     {
         private JwtTokenService JwtService { get; }
+        private LingauManager LingauManager { get; }
         private UserManager<User> UserManager { get; }
         private RiderManager RiderManager { get; }
 
-        public LoginFunc(JwtTokenService jwtService, UserManager<User> userManager, RiderManager riderManager)
+        public LoginFunc(JwtTokenService jwtService, UserManager<User> userManager, RiderManager riderManager, LingauManager lingauManager)
         {
             JwtService = jwtService;
             UserManager = userManager;
             RiderManager = riderManager;
+            LingauManager = lingauManager;
         }
 
         [Function(nameof(Anonymous_User_Register))]
@@ -129,13 +135,14 @@ namespace Do_Api.Funcs
 
             if (!await UserManager.IsInRoleAsync(user,Auth.Role_User))
                 return await req.WriteStringAsync("Invalid username or password.");
-
+            
             var isValidPassword = await UserManager.CheckPasswordAsync(user, loginModel.Password);
             if (!isValidPassword)
                 return await req.WriteStringAsync("Invalid username or password.");
 
             var token = JwtService.GenerateUserAccessToken(user);
             var refreshToken = JwtService.GenerateUserRefreshToken(user);
+            var lingau = await LingauManager.GetLingauAsync(user.Id);
             var result = new Login_Result
             {
                 access_token = token,
@@ -146,7 +153,8 @@ namespace Do_Api.Funcs
                     Username = user.UserName,
                     Email = user.Email,
                     Phone = user.PhoneNumber,
-                    Name = user.Name
+                    Name = user.Name,
+                    Lingau = lingau.Adapt<LingauModel>()
                 }
             };
             return await req.WriteBagAsync(functionName, result);

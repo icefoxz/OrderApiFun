@@ -1,8 +1,13 @@
 using DoManageWebApp.Components;
 using DoManageWebApp.Components.Account;
+using DoManageWebApp.SignalHub;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using OrderApiFun.Core.Services;
 using OrderDbLib;
 using OrderDbLib.Entities;
 using Syncfusion.Blazor;
@@ -18,6 +23,21 @@ builder.Services.AddSyncfusionBlazor();
 //注册服务器用于http请求的client
 builder.Services.AddHttpClient();
 
+//SignalR
+builder.Services.AddSignalR();
+builder.Services.AddResponseCompression(opts =>
+{
+    opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+        new[] { "application/octet-stream" });
+});
+builder.Services.AddScoped<ServerCallService>();
+builder.Services.AddScoped<SignalRCallService>();
+builder.Services.AddScoped<JwtTokenService>();
+builder.Services.AddScoped<OrderCallService>();
+
+//Controller
+builder.Services.AddControllers();
+
 //Services
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
@@ -29,8 +49,31 @@ builder.Services.AddAuthentication(op =>
     {
         op.DefaultScheme = IdentityConstants.ApplicationScheme;
         op.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+        op.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        op.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
+    .AddJwtBearer(op =>
+    {
+        op.TokenValidationParameters = JwtTokenService.TokenValidationParameters;
+        op.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                // If the request is for our hub...
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    path.StartsWithSegments("/orderhub"))
+                {
+                    // Read the token out of the query string
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
     })
     .AddIdentityCookies();
+
 
 //Database
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
@@ -59,6 +102,8 @@ builder.Services.AddSingleton<IEmailSender<User>, IdentityNoOpEmailSender>();
 /*********************App *********************/
 var app = builder.Build();
 
+app.UseResponseCompression();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -72,12 +117,20 @@ else
 }
 
 app.UseHttpsRedirection();
-
 app.UseStaticFiles();
+
+app.UseRouting();
+
 app.UseAntiforgery();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+app.MapHub<OrderHub>("/orderhub");
 
 // Add additional endpoints required by the Identity /Account Razor components.
 app.MapAdditionalIdentityEndpoints();

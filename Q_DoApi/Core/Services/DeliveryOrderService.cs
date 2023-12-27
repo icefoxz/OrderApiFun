@@ -1,18 +1,20 @@
 ﻿using System.Linq.Expressions;
 using Mapster;
-using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Newtonsoft.Json.Linq;
+using OrderApiFun.Core.Services;
 using OrderDbLib;
 using OrderDbLib.Entities;
-using Utls;
 using OrderHelperLib.Contracts;
 using OrderHelperLib.Dtos.DeliveryOrders;
 using Q_DoApi.Core.Utls;
 using Q_DoApi.DtoMapping;
+using Utls;
 using WebUtlLib;
 
-namespace OrderApiFun.Core.Services
+namespace Q_DoApi.Core.Services
 {
     public class DoService
     {
@@ -28,18 +30,48 @@ namespace OrderApiFun.Core.Services
             LingauManager = lingauManager;
         }
 
-        public async Task<DeliveryOrder> CreateDeliveryOrderAsync(string userId, DeliverOrderModel dto, ILogger log)
+        public async ValueTask<ResultOf<DeliveryOrder>> Do_CreateAsync(string userId, DeliverOrderModel orderDto, ILogger log)
         {
             var user = await UserManager.FindByIdAsync(userId);
-            if (user == null) throw new NullReferenceException("user is null!");
-            var newOrder = dto.Adapt<DeliveryOrder>(EntityMapper.Config);
+            if (user == null)
+            {
+                log.Event($"User not found! id = {userId}");
+                return ResultOf.Fail<DeliveryOrder>("User not found!");
+            }
+            if (!MyPhone.VerifyPhoneNumber(orderDto.SenderInfo.PhoneNumber))
+            {
+                log.Event($"Invalid sender phone number. {orderDto.SenderInfo.PhoneNumber}");
+                return ResultOf.Fail<DeliveryOrder>("Invalid sender phone number.");
+            }
 
+            if (!MyPhone.VerifyPhoneNumber(orderDto.ReceiverInfo.PhoneNumber))
+            {
+                log.Event($"Invalid receiver phone number. {orderDto.ReceiverInfo.PhoneNumber}");
+                return ResultOf.Fail<DeliveryOrder>("Invalid receiver phone number.");
+            }
+
+            var result = await Do_GetPrice(orderDto, log);
+            if (!result.IsSuccess)
+                return ResultOf.Fail<DeliveryOrder>(result.Message);
+            var dto = result.Data;
+            orderDto.PaymentInfo = new PaymentInfoDto
+            {
+                Fee = dto.PaymentInfo.Fee,
+                Charge = dto.PaymentInfo.Fee,
+            };
+            var newDo = await CreateNewDo(user, orderDto, log);
+            return ResultOf.Success(newDo);
+        }
+
+        private async Task<DeliveryOrder> CreateNewDo(User user, DeliverOrderModel dto, ILogger log)
+        {
+            var newOrder = dto.Adapt<DeliveryOrder>(EntityMapper.Config);
             newOrder.User = user;
-            newOrder.UserId = userId;
+            newOrder.UserId = user.Id;
             newOrder.SenderInfo = new SenderInfo
             {
                 User = user,
-                UserId = userId,
+                UserId = user.Id,
                 Name = dto.SenderInfo.Name,
                 PhoneNumber = dto.SenderInfo.PhoneNumber,
                 NormalizedPhoneNumber = MyPhone.NormalizePhoneNumber(dto.SenderInfo.PhoneNumber),
@@ -49,7 +81,7 @@ namespace OrderApiFun.Core.Services
             {
                 newOrder.ReceiverInfo = CreateOrderReceiverInfo(receiver.Name, receiver.PhoneNumber);
                 newOrder.ReceiverInfo.User = receiver;
-                newOrder.ReceiverInfo.UserId = userId;
+                newOrder.ReceiverInfo.UserId = user.Id;
             }
             else
             {
@@ -57,10 +89,11 @@ namespace OrderApiFun.Core.Services
                     CreateOrderReceiverInfo(dto.ReceiverInfo.Name, dto.ReceiverInfo.PhoneNumber);
             }
 
+            newOrder.AddStateHistory(DoStateMap.Created[0]);
             Db.DeliveryOrders.Add(newOrder);
             await Db.SaveChangesAsync();
 
-            log.LogInformation($"DeliveryOrder created with ID: {newOrder.Id}");
+            log.Event($"DeliveryOrder created with ID: {newOrder.Id}");
             return newOrder;
 
             ReceiverInfo CreateOrderReceiverInfo(string receiverName, string phoneNumber)
@@ -74,7 +107,7 @@ namespace OrderApiFun.Core.Services
             }
         }
 
-        public async Task<PageList<DeliveryOrder>> User_GetDeliveryOrdersAsync(string? userId, int pageSize, int pageIndex,
+        public async ValueTask<PageList<DeliveryOrder>> User_DoPage_GetAsync(string? userId, int pageSize, int pageIndex,
             Expression<Func<DeliveryOrder, bool>>? filter, ILogger log)
         {
             log.Event($"GetDeliveryOrders: userId={userId}, pageSize={pageSize}, page={pageIndex}");
@@ -99,13 +132,13 @@ namespace OrderApiFun.Core.Services
             return new PageList<DeliveryOrder>(index, pageSize, count, list);
         }
 
-        public async Task<PageList<DeliveryOrder>> GetPageList(
+        public async ValueTask<PageList<DeliveryOrder>> DoPage_GetAsync(
             int pageSize, int index, ILogger log,
             Expression<Func<DeliveryOrder, bool>>? filter = null,
             params (Expression<Func<DeliveryOrder, object>> sortExpression, SortDirection sortDirection)[] sorts)
         {
             log.LogInformation($"GetDeliveryOrders: pageSize={pageSize}, index={index}");
-            index = Math.Max(1, index);
+            index = Math.Max(0, index);
             var query = Db.DeliveryOrders
                 .Include(d => d.Rider)
                 .Include(d => d.ReceiverInfo.User)
@@ -124,40 +157,24 @@ namespace OrderApiFun.Core.Services
             query = AddInOrderedSorts(sorts, query);
 
             var array = await query
-                .Skip(pageSize * (index - 1))
+                .Skip(pageSize * index)
                 .Take(pageSize)
                 .ToArrayAsync();
 
             return PageList.Instance(index, pageSize, count, array);
         }
 
-        public async Task<DeliveryOrder?> GetFirstAsync(Expression<Func<DeliveryOrder, bool>> filter,
+        public Task<DeliveryOrder?> Do_FirstAsync(Expression<Func<DeliveryOrder, bool>> filter,
             params (Expression<Func<DeliveryOrder, object>> sortExpression, SortDirection sortDirection)[] sorts)
         {
             var query = Db.DeliveryOrders
                 .Include(d => d.User)
                 .Where(o=>!o.IsDeleted)
                 .Where(filter);
-            return await AddInOrderedSorts(sorts, query).FirstOrDefaultAsync();
+            return AddInOrderedSorts(sorts, query).FirstOrDefaultAsync();
         }
 
-        public async Task PayDeliveryOrderByLingauAsync(string userId, DeliveryOrder order, ILogger log)
-        {
-            log.LogInformation($"PayDeliveryOrderByLingau: userId={userId}, orderId={order.Id}");
-            var user = await UserManager.FindByIdAsync(userId);
-            if (user == null)
-                throw new InvalidOperationException("User not found");
-            var lingau = await LingauManager.GetLingauAsync(userId);
-            var price = order.PaymentInfo.Charge;
-            if (price < 0) throw new InvalidOperationException($"Invalid price: {price} from order.{order.Id}");
-            if (lingau.Credit < price)
-            {
-                throw new InvalidOperationException("Insufficient balance");
-            }
-            await LingauManager.UpdateLingauBalanceAsync(userId, price, log);
-        }
-
-        public async Task<ResultOf<DeliveryOrder>> SubState_Update(DeliveryOrder order, TransitionRoles role, int subState, ILogger log)
+        public async ValueTask<ResultOf<DeliveryOrder>> Do_SubState_Update(DeliveryOrder order, TransitionRoles role, int subState, ILogger log)
         {
             log.Event($"Order.{order.Id}, {order.SubState} => {subState}, subState = {subState}");
             if (!DoStateMap.IsAssignableSubState(role, order.SubState, subState))
@@ -173,22 +190,25 @@ namespace OrderApiFun.Core.Services
         /// <exception cref="ArgumentException"></exception>
         private async Task UpdateOrderStateAsync(DeliveryOrder order, int subState, ILogger log)
         {
-            order.Status = subState.ConvertToDoStatusInt();
+            var state = DoStateMap.GetState(subState);
+            order.Status = state.Status;
             order.SubState = subState;
+            order.AddStateHistory(state);
             await Db.SaveChangesAsync();
             log.Event($"Order[{order.Id}] state updated to {order.Status}");
         }
 
-        public async Task<ResultOf<DeliveryOrder>> AssignRiderAsync(long deliveryOrderId, Rider rider)
+        public async ValueTask<ResultOf<DeliveryOrder>> Do_Rider_AssignAsync(long deliveryOrderId, Rider rider)
         {
-            var deliveryOrder = await GetFirstAsync(o => o.Id == deliveryOrderId);
+            var deliveryOrder = await Do_FirstAsync(o => o.Id == deliveryOrderId);
             if (deliveryOrder == null) return ResultOf.Fail<DeliveryOrder>("Order not found!");
-            if (deliveryOrder.RiderId != null) return ResultOf.Fail<DeliveryOrder>("Order already assigned!");
+            if (deliveryOrder.Rider != null) return ResultOf.Fail<DeliveryOrder>("Order already assigned!");
             deliveryOrder.RiderId = rider.Id;
             deliveryOrder.Rider = rider;
 
             deliveryOrder.Status = DoSubState.AssignState.ConvertToDoStatusInt();
             deliveryOrder.SubState = DoSubState.AssignState;
+            deliveryOrder.AddStateHistory(DoSubState.AssignState, $"{rider.Name} - {rider.Phone}");
             await Db.SaveChangesAsync();
             return ResultOf.Success(deliveryOrder);
         }
@@ -230,5 +250,133 @@ namespace OrderApiFun.Core.Services
             return orderedQuery;
         }
         #endregion
+
+        public async ValueTask<ResultOf<Lingau>> DoPay_ByLingau(string userId, long deliveryOrderId, ILogger log)
+        {
+            var user = await UserManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                log.Event($"User not found! id = {userId}");
+                return ResultOf.Fail<Lingau>("User not found!");
+            }
+
+            var order = await Do_FirstAsync(o => o.Id == deliveryOrderId);
+            if (order == null)
+            {
+                log.Event($"Order not found! id = {deliveryOrderId}");
+                return ResultOf.Fail<Lingau>("Order not found!");
+            }
+
+            var result = await LingauManager.UpdateLingauBalanceAsync(userId, order.PaymentInfo.Charge, log, false);
+            if (!result.IsSuccess)
+            {
+                log.Event($"UpdateLingauBalanceAsync failed! {result.Message}");
+                return ResultOf.Fail<Lingau>(result.Message);
+            }
+            log.Event(
+                $"User[{userId}].Lingau.Credit = {user.Lingau.Credit}, Order[{order.Id}].PaymentInfo.Charge = {order.PaymentInfo.Charge}");
+            order.PaymentInfo.IsReceived = true;
+            order.PaymentInfo.Method = PaymentMethods.UserCredit.ToDisplayString();
+            order.PaymentInfo.Reference = userId;
+            log.Event($"Order[{order.Id}].Payment Received! Method = {order.PaymentInfo.Method}, Reference = {userId}");
+            await Db.SaveChangesAsync();
+            return ResultOf.Success(result.Data);
+        }
+
+        public async ValueTask<ResultOf<DeliveryOrder>> DoPay_RiderCollect(string userId, long deliveryOrderId,
+            ILogger log)
+        {
+            var user = await UserManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                log.Event($"User not found! id = {userId}");
+                return ResultOf.Fail<DeliveryOrder>("User not found!");
+            }
+
+            var order = await Do_FirstAsync(o => o.Id == deliveryOrderId);
+            if (order == null)
+            {
+                log.Event($"Order not found! id = {deliveryOrderId}");
+                return ResultOf.Fail<DeliveryOrder>("Order not found!");
+            }
+
+            order.PaymentInfo.Method = PaymentMethods.RiderCollection.ToDisplayString();
+            log.Event($"Order[{order.Id}].PaymentInfo.Method = {order.PaymentInfo.Method}");
+            await Db.SaveChangesAsync();
+            return ResultOf.Success(order);
+        }
+
+        public async ValueTask<ResultOf<DeliverOrderModel>> Do_GetPrice(DeliverOrderModel dto, ILogger log)
+        {
+            log.Event($"{nameof(Do_GetPrice)}()");
+            var item = dto.ItemInfo;
+            var vol = GetVolume(item);
+            var weight = item.Weight;
+            var deliver = dto.DeliveryInfo;
+            var startLat = deliver.StartLocation.Latitude;
+            var startLng = deliver.StartLocation.Longitude;
+            var endLat = deliver.EndLocation.Latitude;
+            var endLng = deliver.EndLocation.Longitude;
+            var km = await GetGoogleMatrixDistance(startLat, startLng, endLat, endLng);
+            if (km < 0) return ResultOf.Fail<DeliverOrderModel>("Failed to get distance.");
+            var price = GetPrice((float)km, vol, weight);
+            dto.PaymentInfo.Fee = (float)price;
+            dto.DeliveryInfo.Distance = (float)km;
+            return ResultOf.Success(dto);
+
+            double GetPrice(float km, float size, float kg)
+            {
+                var vol = size > kg ? size : kg;
+                var price = GetKmMultiplier(km) * GetVolMultiplier(vol);
+                return price;
+            }
+
+            float ToCm(float m) => m * 100;
+
+            async Task<double> GetGoogleMatrixDistance(double startLat, double startLng, double endLat,
+                double endLng)
+            {
+                var apiKey = "AIzaSyAaKnJtZ3GaxLAv1YPcxdM9u1QVCBKao1E"; // 替换为您的 API 密钥
+                var requestUrl =
+                    $"https://maps.googleapis.com/maps/api/distancematrix/json?origins={startLat},{startLng}&destinations={endLat},{endLng}&key={apiKey}";
+
+                using var client = new HttpClient();
+                var response = await client.GetAsync(requestUrl);
+                if (!response.IsSuccessStatusCode) return -1;
+                string content = await response.Content.ReadAsStringAsync();
+                JObject jsonResponse = JObject.Parse(content);
+                try
+                {
+                    // 解析 JSON 数据以获取距离（米）
+                    var obj = jsonResponse["rows"][0]["elements"][0];
+                    var meters = (double)obj["distance"]["value"];
+                    log.Event($"Meters = {meters}");
+                    // 这里您可以根据距离、体积和重量计算价格
+                    // 示例：return distance / 1000; // 将距离从米转换为公里
+                    return meters / 1000;
+                }
+                catch (Exception e)
+                {
+                    log.Event("result failed:\n" + e);
+                    return -1;
+                }
+            }
+
+            float GetVolume(ItemInfoDto info) => ToCm(info.Width) * ToCm(info.Height) * ToCm(info.Length) / 50000;
+
+            double GetKmMultiplier(float km)
+            {
+                if (km < 1) return 1;
+                return km / 3 * 0.5;
+            }
+
+            double GetVolMultiplier(float v)
+            {
+                if (v <= 1)
+                    return 5;
+                return 5 * v;
+            }
+        }
+
     }
 }
