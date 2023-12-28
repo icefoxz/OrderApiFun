@@ -12,7 +12,7 @@ using Q_DoApi.Core.Extensions;
 using Q_DoApi.Core.Services;
 using Utls;
 
-namespace Q_DoApi.Funcs;
+namespace FunctionApp1.Funcs;
 
 public class RiderFunc
 {
@@ -29,8 +29,8 @@ public class RiderFunc
 
     //创建rider
     [Function(nameof(User_TransformToRider))]
-    public async Task<HttpResponseData> User_TransformToRider([HttpTrigger(AuthorizationLevel.Anonymous, "post")] 
-        HttpRequestData req, 
+    public async Task<HttpResponseData> User_TransformToRider(
+        [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req,
         FunctionContext context)
     {
         var log = context.GetLogger(nameof(User_TransformToRider));
@@ -50,7 +50,8 @@ public class RiderFunc
 
     [Function(nameof(Rider_Create))]
     public async Task<HttpResponseData> Rider_Create(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Function, "post")]
+        HttpRequestData req,
         FunctionContext context)
     {
         var (funcName, bag, log) = await req.GetBagWithLogAsync(context);
@@ -69,7 +70,8 @@ public class RiderFunc
     //rider转账给user
     [Function(nameof(Rider_TransferToUser))]
     public async Task<HttpResponseData> Rider_TransferToUser(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req,
+        [HttpTrigger(AuthorizationLevel.Function, "post")]
+        HttpRequestData req,
         FunctionContext context)
     {
         var (funcName, bag, log) = await req.GetBagWithLogAsync(context);

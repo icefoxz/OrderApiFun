@@ -14,7 +14,7 @@ using Q_DoApi.Core.Services;
 using Utls;
 using WebUtlLib;
 
-namespace Q_DoApi.Funcs
+namespace FunctionApp1.Funcs
 {
     public class RiderDoFunc
     {
@@ -22,24 +22,21 @@ namespace Q_DoApi.Funcs
         private DoService DoService { get; }
         private RiderManager RiderManager { get; }
         private UserManager<User> UserManager { get; }
-        private SignalRCall SignalRCall { get; }
 
         public RiderDoFunc(DoService doService,
             UserManager<User> userManager,
             RiderManager riderManager,
-            LingauManager lingauManager, 
-            SignalRCall signalRCall)
+            LingauManager lingauManager)
         {
             DoService = doService;
             UserManager = userManager;
             RiderManager = riderManager;
             LingauManager = lingauManager;
-            SignalRCall = signalRCall;
         }
 
         [Function(nameof(Rider_Get_Unassigned))]
         public async Task<HttpResponseData> Rider_Get_Unassigned(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+            [HttpTrigger(AuthorizationLevel.Function, "post")]
             HttpRequestData req,
             FunctionContext context)
         {
@@ -70,7 +67,7 @@ namespace Q_DoApi.Funcs
 
         [Function(nameof(Rider_Get_Assigned))]
         public async Task<HttpResponseData> Rider_Get_Assigned(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+            [HttpTrigger(AuthorizationLevel.Function, "post")]
             HttpRequestData req,
             FunctionContext context)
         {
@@ -100,7 +97,7 @@ namespace Q_DoApi.Funcs
 
         [Function(nameof(Rider_Get_Histories))]
         public async Task<HttpResponseData> Rider_Get_Histories(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+            [HttpTrigger(AuthorizationLevel.Function, "post")]
             HttpRequestData req,
             FunctionContext context)
         {
@@ -130,17 +127,17 @@ namespace Q_DoApi.Funcs
 
         [Function(nameof(Rider_Get_SubStates))]
         public async Task<HttpResponseData> Rider_Get_SubStates(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+            [HttpTrigger(AuthorizationLevel.Function, "post")]
             HttpRequestData req,
             FunctionContext context)
         {
             var (funcName, bag, log) = await req.GetBagWithLogAsync(context);
             return await req.WriteBagAsync(funcName, new object[] { DoStateMap.GetAllSubStates().ToArray() });
         }
-        
+
         [Function(nameof(Rider_AvailableStates))]
         public async Task<HttpResponseData> Rider_AvailableStates(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+            [HttpTrigger(AuthorizationLevel.Function, "post")]
             HttpRequestData req,
             FunctionContext context)
         {
@@ -152,7 +149,7 @@ namespace Q_DoApi.Funcs
 
         [Function(nameof(Rider_Do_Assign))]
         public async Task<HttpResponseData> Rider_Do_Assign(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+            [HttpTrigger(AuthorizationLevel.Function, "post")]
             HttpRequestData req,
             FunctionContext context)
         {
@@ -181,7 +178,7 @@ namespace Q_DoApi.Funcs
 
         [Function(nameof(Rider_Do_StateUpdate))]
         public async Task<HttpResponseData> Rider_Do_StateUpdate(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+            [HttpTrigger(AuthorizationLevel.Function, "post")]
             HttpRequestData req,
             FunctionContext context)
         {
@@ -196,7 +193,7 @@ namespace Q_DoApi.Funcs
 
         [Function(nameof(Rider_Do_Cancel))]
         public async Task<HttpResponseData> Rider_Do_Cancel(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+            [HttpTrigger(AuthorizationLevel.Function, "post")]
             HttpRequestData req,
             FunctionContext context)
         {

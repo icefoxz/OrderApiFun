@@ -3,15 +3,20 @@ using Azure.Storage.Blobs.Models;
 
 namespace Q_DoApi.Core.Services;
 
-public class BlobService 
+public interface IBlobService
+{
+    Task<string> UploadFileAsync(Stream fileStream, string contentType = "image/jpeg");
+}
+
+public class BlobService : IBlobService
 {
     private readonly BlobServiceClient _blobServiceClient;
     private readonly string _containerName;
 
-    public BlobService()
+    public BlobService(BlobServiceClient blobServiceClient, string containerName)
     {
-        _blobServiceClient = new BlobServiceClient(Config.BlobConnectionString());
-        _containerName = Config.GetBlobContainerName();
+        _blobServiceClient = blobServiceClient;
+        _containerName = containerName;
     }
 
     public async Task<string> UploadFileAsync(Stream fileStream, string contentType = "image/jpeg")

@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using FunctionApp1.Funcs;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Azure.Functions.Worker.Middleware;
@@ -8,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using OrderApiFun.Core.Services;
 using OrderApiFun.Core.Tokens;
 using OrderDbLib;
-using Q_DoApi.Funcs;
 
 namespace OrderApiFun.Core.Middlewares
 {
@@ -93,7 +93,7 @@ namespace OrderApiFun.Core.Middlewares
             }
             var rId = JwtTokenService.GetRiderId(result);
             if (!long.TryParse(rId, out var riderId)) return;
-            var connString = Config.DbConnectionString();
+            var connString = Configuration.GetConnectionString(Config.DefaultConnectionString);
             var op = new DbContextOptionsBuilder<OrderDbContext>();
             await using var db = new OrderDbContext(op.UseSqlServer(connString).Options);
             var isRiderExist = await db.Riders.AnyAsync(r => r.Id == riderId && !r.IsDeleted);
@@ -118,7 +118,7 @@ namespace OrderApiFun.Core.Middlewares
 
             var result = await TokenValidationAsync(bearerToken);
             //如果用户要刷新token,需要提交刷新令牌, 但一般都是提交AccessToken
-            var tokenType = functionName == nameof(LoginFunc.User_ReloginApi)
+            var tokenType = functionName == "User_ReloginApi" //nameof(LoginFunc.User_ReloginApi)
                 ? JwtTokenService.RefreshTokenHeader
                 : JwtTokenService.AccessTokenHeader;
             if (!await VerifyTokenTypeAsync(context, log, result, req, tokenType)) return;

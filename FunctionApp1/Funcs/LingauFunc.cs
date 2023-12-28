@@ -9,7 +9,7 @@ using OrderHelperLib.Dtos.Lingaus;
 using Q_DoApi.Core.Services;
 using Utls;
 
-namespace Q_DoApi.Funcs;
+namespace FunctionApp1.Funcs;
 
 public class LingauFunc
 {
@@ -22,7 +22,7 @@ public class LingauFunc
 
     [Function(nameof(User_GetLingau))]
     public async Task<HttpResponseData> User_GetLingau(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "get")]
+        [HttpTrigger(AuthorizationLevel.Function, "get")]
         HttpRequestData req,
         FunctionContext context)
     {

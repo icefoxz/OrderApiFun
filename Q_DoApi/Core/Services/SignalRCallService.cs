@@ -1,15 +1,16 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using OrderHelperLib;
 using OrderHelperLib.Contracts;
 using Q_DoApi.Core.Utls;
 
 namespace Q_DoApi.Core.Services;
 
-public static class SignalRCall
+public class SignalRCall
 {
-    private static string _serverUrl;
+    private readonly string _serverUrl = Config.GetSignalRServerUrl();
 
-    public static string ServerUrl
+    public string ServerUrl
     {
         get
         {
@@ -19,12 +20,11 @@ public static class SignalRCall
         }
     }
 
-    public static void Init(string serverUrl)
+    public void Update_Do_Call(long orderId, ILogger log)
     {
-        _serverUrl = serverUrl;
-    }
-
-    public static void Update_Do_Call(long orderId, ILogger log) =>
-        Task.Run(async () => await ApiCaller.ApiPost(_serverUrl, SignalREvents.ServerCall, SignalREvents.Call_Do_Ver,
+        Task.Run(() => ApiCaller.ApiPost(ServerUrl,
+            SignalREvents.ServerCall,
+            SignalREvents.Call_Do_Ver,
             DataBag.SerializeWithName(SignalREvents.Call_Do_Ver, orderId), log));
+    }
 }

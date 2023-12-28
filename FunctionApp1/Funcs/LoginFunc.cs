@@ -16,7 +16,7 @@ using Q_DoApi.Core.Services;
 using Utls;
 using WebUtlLib;
 
-namespace Q_DoApi.Funcs
+namespace FunctionApp1.Funcs
 {
     public class LoginFunc
     {
@@ -25,7 +25,11 @@ namespace Q_DoApi.Funcs
         private UserManager<User> UserManager { get; }
         private RiderManager RiderManager { get; }
 
-        public LoginFunc(JwtTokenService jwtService, UserManager<User> userManager, RiderManager riderManager, LingauManager lingauManager)
+        public LoginFunc(
+            JwtTokenService jwtService, 
+            UserManager<User> userManager, 
+            RiderManager riderManager, 
+            LingauManager lingauManager)
         {
             JwtService = jwtService;
             UserManager = userManager;
@@ -35,7 +39,7 @@ namespace Q_DoApi.Funcs
 
         [Function(nameof(Anonymous_User_Register))]
         public async Task<HttpResponseData> Anonymous_User_Register(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)]
+            [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)]
             HttpRequestData req,
             FunctionContext context)
         {
@@ -64,7 +68,6 @@ namespace Q_DoApi.Funcs
             {
                 access_token = token,
                 refresh_token = refreshToken,
-                signalRUrl = Config.GetSignalRHubUrl(),
                 User = new UserModel
                 {
                     Id = user.Id,
@@ -77,11 +80,11 @@ namespace Q_DoApi.Funcs
             var bag = DataBag.SerializeWithName(nameof(Login_Result), loginResult);
             await successResponse.WriteStringAsync(bag);
             return successResponse;
-        }        
-        
+        }
+
         [Function(nameof(Anonymous_Rider_Create))]
         public async Task<HttpResponseData> Anonymous_Rider_Create(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)]
+            [HttpTrigger(AuthorizationLevel.Function, "post", Route = null)]
             HttpRequestData req,
             FunctionContext context)
         {
@@ -109,7 +112,6 @@ namespace Q_DoApi.Funcs
             {
                 access_token = token,
                 refresh_token = refreshToken,
-                signalRUrl = Config.GetSignalRHubUrl(),
                 User = new UserModel
                 {
                     Id = user.Id,
@@ -124,7 +126,7 @@ namespace Q_DoApi.Funcs
 
         [Function(nameof(Anonymous_Login_User))]
         public async Task<HttpResponseData> Anonymous_Login_User(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req,
+            [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req,
             FunctionContext context)
         {
             var (functionName, b, log) = await req.GetBagWithLogAsync(context);
@@ -134,9 +136,9 @@ namespace Q_DoApi.Funcs
             if (user == null)
                 return await req.WriteStringAsync("Invalid username or password.");
 
-            if (!await UserManager.IsInRoleAsync(user,Auth.Role_User))
+            if (!await UserManager.IsInRoleAsync(user, Auth.Role_User))
                 return await req.WriteStringAsync("Invalid username or password.");
-            
+
             var isValidPassword = await UserManager.CheckPasswordAsync(user, loginModel.Password);
             if (!isValidPassword)
                 return await req.WriteStringAsync("Invalid username or password.");
@@ -148,7 +150,6 @@ namespace Q_DoApi.Funcs
             {
                 access_token = token,
                 refresh_token = refreshToken,
-                signalRUrl = Config.GetSignalRHubUrl(),
                 User = new UserModel
                 {
                     Id = user.Id,
@@ -164,14 +165,14 @@ namespace Q_DoApi.Funcs
 
         [Function(nameof(Anonymous_Login_Rider))]
         public async Task<HttpResponseData> Anonymous_Login_Rider(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req,
+            [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req,
             FunctionContext context)
         {
             var (functionName, b, log) = await req.GetBagWithLogAsync(context);
             var loginModel = b.Get<User_LoginDto>(0);
 
             var user = await UserManager.FindByNameAsync(loginModel.Username);
-            if (user ==null)
+            if (user == null)
                 return await req.WriteStringAsync("Invalid username or password.");
 
             if (!await UserManager.CheckPasswordAsync(user, loginModel.Password))
@@ -190,7 +191,6 @@ namespace Q_DoApi.Funcs
             {
                 access_token = token,
                 refresh_token = refreshToken,
-                signalRUrl = Config.GetSignalRHubUrl(),
                 User = new UserModel
                 {
                     Id = rider.Id.ToString(),
@@ -202,14 +202,14 @@ namespace Q_DoApi.Funcs
             };
             return await req.WriteBagAsync(functionName, result);
         }
-    
+
 
         [Function(nameof(User_ReloginApi))]
         public async Task<HttpResponseData> User_ReloginApi(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequestData req,
+            [HttpTrigger(AuthorizationLevel.Function, "post")] HttpRequestData req,
             FunctionContext context)
         {
-            var (functionName, b, log) = await req.GetBagWithLogAsync(context); 
+            var (functionName, b, log) = await req.GetBagWithLogAsync(context);
             var refreshToken = GetValueFromHeader(req, JwtTokenService.RefreshTokenHeader);
             var hasRefreshToken = !string.IsNullOrWhiteSpace(refreshToken);
 
@@ -222,7 +222,7 @@ namespace Q_DoApi.Funcs
                 return await req.WriteStringAsync("Username not found!");
 
             var isValid = await JwtService.ValidateRefreshTokenAsync(refreshToken, username);
-            if(!isValid)
+            if (!isValid)
             {
                 log.Event("Invalid refresh token");
                 return await req.WriteStringAsync("Invalid refresh token");
@@ -250,7 +250,6 @@ namespace Q_DoApi.Funcs
             {
                 access_token = newAccessToken,
                 refresh_token = refreshToken,
-                signalRUrl = Config.GetSignalRHubUrl(),
                 User = new UserModel
                 {
                     Id = user.Id,
@@ -264,7 +263,7 @@ namespace Q_DoApi.Funcs
 
         }
 
-        private string GetValueFromHeader(HttpRequestData req,string header)
+        private string GetValueFromHeader(HttpRequestData req, string header)
         {
             req.Headers.TryGetValues(header, out var tokenValues);
             var tokenArray = tokenValues?.ToArray() ?? null;

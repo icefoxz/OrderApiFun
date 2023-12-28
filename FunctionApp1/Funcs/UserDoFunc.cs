@@ -13,25 +13,21 @@ using Q_DoApi.Core.Services;
 using Utls;
 using WebUtlLib;
 
-namespace Q_DoApi.Funcs;
+namespace FunctionApp1.Funcs;
 
 public class UserDoFunc
 {
     private LingauManager LingauManager { get; }
     private DoService DoService { get; }
-    private SignalRCall SignalRCall { get; }
-    public UserDoFunc(DoService doService, 
-        LingauManager lingauManager, 
-        SignalRCall signalRCall)
+    public UserDoFunc(DoService doService, LingauManager lingauManager)
     {
         DoService = doService;
         LingauManager = lingauManager;
-        SignalRCall = signalRCall;
     }
 
     [Function(nameof(User_Get_Active))]
     public async Task<HttpResponseData> User_Get_Active(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+        [HttpTrigger(AuthorizationLevel.Function, "post")]
         HttpRequestData req,
         FunctionContext context)
     {
@@ -57,7 +53,7 @@ public class UserDoFunc
 
     [Function(nameof(User_Get_Histories))]
     public async Task<HttpResponseData> User_Get_Histories(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+        [HttpTrigger(AuthorizationLevel.Function, "post")]
         HttpRequestData req,
         FunctionContext context)
     {
@@ -83,17 +79,17 @@ public class UserDoFunc
 
     [Function(nameof(User_Get_SubStates))]
     public async Task<HttpResponseData> User_Get_SubStates(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+        [HttpTrigger(AuthorizationLevel.Function, "post")]
         HttpRequestData req,
         FunctionContext context)
     {
-        var (funcName,bag,log) = await req.GetBagWithLogAsync(context);
+        var (funcName, bag, log) = await req.GetBagWithLogAsync(context);
         return await req.WriteBagAsync(funcName, new object[] { DoStateMap.GetAllSubStates().ToArray() });
     }
 
     [Function(nameof(User_Do_Create))]
     public async Task<HttpResponseData> User_Do_Create(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+        [HttpTrigger(AuthorizationLevel.Function, "post")]
         HttpRequestData req,
         FunctionContext context)
     {
@@ -118,11 +114,11 @@ public class UserDoFunc
 
     [Function(nameof(User_DoPay_Credit))]
     public async Task<HttpResponseData> User_DoPay_Credit(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+        [HttpTrigger(AuthorizationLevel.Function, "post")]
         HttpRequestData req,
         FunctionContext context)
     {
-        var (funcName,bag,log) = await req.GetBagWithLogAsync(context);
+        var (funcName, bag, log) = await req.GetBagWithLogAsync(context);
         // Retrieve the request body
         var userId = context.GetUserId();
         DeliveryOrder? order;
@@ -141,15 +137,15 @@ public class UserDoFunc
             log.LogWarning($"Invalid request body.\n{e}");
             return await req.WriteStringAsync(HttpStatusCode.BadRequest, "Invalid request body.");
         }
-    }    
-    
+    }
+
     [Function(nameof(User_Do_GetPrice))]
     public async Task<HttpResponseData> User_Do_GetPrice(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+        [HttpTrigger(AuthorizationLevel.Function, "post")]
         HttpRequestData req,
         FunctionContext context)
     {
-        var (funcName,bag,log) = await req.GetBagWithLogAsync(context);
+        var (funcName, bag, log) = await req.GetBagWithLogAsync(context);
         // Retrieve the request body
         try
         {
@@ -165,15 +161,15 @@ public class UserDoFunc
             log.LogWarning($"Invalid request body.\n{e}");
             return await req.WriteStringAsync(HttpStatusCode.BadRequest, "Invalid request body.");
         }
-    }    
-    
+    }
+
     [Function(nameof(User_DoPay_Rider))]
     public async Task<HttpResponseData> User_DoPay_Rider(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+        [HttpTrigger(AuthorizationLevel.Function, "post")]
         HttpRequestData req,
         FunctionContext context)
     {
-        var (funcName,bag,log) = await req.GetBagWithLogAsync(context);
+        var (funcName, bag, log) = await req.GetBagWithLogAsync(context);
         // Retrieve the request body
         var userId = context.GetUserId();
         DeliveryOrder? order;
@@ -196,11 +192,11 @@ public class UserDoFunc
 
     [Function(nameof(User_Do_StatusUpdate))]
     public async Task<HttpResponseData> User_Do_StatusUpdate(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+        [HttpTrigger(AuthorizationLevel.Function, "post")]
         HttpRequestData req,
         FunctionContext context)
     {
-        var (functionName,bag,log) = await req.GetBagWithLogAsync(context);
+        var (functionName, bag, log) = await req.GetBagWithLogAsync(context);
         var orderId = bag.Get<long>(0);
         var subState = bag.Get<int>(1);
         var result =
@@ -215,7 +211,7 @@ public class UserDoFunc
 
     [Function(nameof(User_Do_Cancel))]
     public async Task<HttpResponseData> User_Do_Cancel(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+        [HttpTrigger(AuthorizationLevel.Function, "post")]
         HttpRequestData req,
         FunctionContext context)
     {
@@ -236,7 +232,7 @@ public class UserDoFunc
         return hpl;
     }
 
-    private async Task<PageList<DeliverOrderModel>> GetActivePageList(string userId, (string functionName, DataBag bag, ILogger log) f,int pageIndex = 0,int pageSize = 50)
+    private async Task<PageList<DeliverOrderModel>> GetActivePageList(string userId, (string functionName, DataBag bag, ILogger log) f, int pageIndex = 0, int pageSize = 50)
     {
         var orderPl = await DoService.User_DoPage_GetAsync(userId, pageSize, pageIndex, d => d.Status >= 0, f.log);
         var opl = orderPl.AdaptPageList<DeliveryOrder, DeliverOrderModel>();
@@ -246,7 +242,7 @@ public class UserDoFunc
     /// <summary>
     /// 更新订单状态 bag[doId,subState]
     /// </summary>
-    private async Task<ResultOf<DeliveryOrder>> UseDo_StateUpdate(long orderId, string userId,int subState, ILogger log)
+    private async Task<ResultOf<DeliveryOrder>> UseDo_StateUpdate(long orderId, string userId, int subState, ILogger log)
     {
         var order = await UserDo_Get(userId, orderId);
         if (order == null)

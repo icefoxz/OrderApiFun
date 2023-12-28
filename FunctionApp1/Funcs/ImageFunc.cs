@@ -3,19 +3,19 @@ using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
 using Q_DoApi.Core.Services;
 
-namespace Q_DoApi.Funcs;
+namespace FunctionApp1.Funcs;
 
 public class ImageFunc
 {
-    private BlobService _blobService { get; }
-    public ImageFunc(BlobService blobService)
+    private IBlobService _blobService { get; }
+    public ImageFunc(IBlobService blobService)
     {
         _blobService = blobService;
     }
 
     [Function(nameof(Anonymous_UploadImage))]
     public async Task<HttpResponseData> Anonymous_UploadImage(
-        [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+        [HttpTrigger(AuthorizationLevel.Function, "post")]
         HttpRequestData req,
         FunctionContext context)
     {
