@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Newtonsoft.Json;
 using OrderDbLib.Entities;
+using Utls;
 
 namespace OrderDbLib
 {
@@ -55,8 +55,8 @@ namespace OrderDbLib
             });
             b.Entity<DeliveryOrder>().Property(d => d.StateHistory)
                 .HasConversion(
-                    h => JsonConvert.SerializeObject(h),
-                    s => JsonConvert.DeserializeObject<StateSegment[]>(s) ?? Array.Empty<StateSegment>())
+                    h => Json.Serialize(h),
+                    s => Json.Deserialize<StateSegment[]>(s) ?? Array.Empty<StateSegment>())
                 .Metadata.SetValueComparer(new ValueComparer<StateSegment[]>(
                     (c1, c2) => (c1 == null && c2 == null) || (c1 != null && c2 != null && c1.SequenceEqual(c2)),
                     c => c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
@@ -68,8 +68,8 @@ namespace OrderDbLib
         {
             return new StateSegment
             {
-                ImageUrl = s.ImageUrl,
-                Remark = s.Remark,
+                Data = s.Data,
+                Type = s.Type,
                 SubState = s.SubState,
                 Timestamp = s.Timestamp
             };

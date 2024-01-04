@@ -7,10 +7,15 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using OrderApiFun.Core.Services;
 using OrderDbLib;
 using OrderDbLib.Entities;
 using Syncfusion.Blazor;
+using Syncfusion.Licensing;
+using WebUtlLib;
+using WebUtlLib.Services;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +25,7 @@ builder.Services.AddRazorComponents()
 
 //Syncfusion
 builder.Services.AddSyncfusionBlazor();
+
 //注册服务器用于http请求的client
 builder.Services.AddHttpClient();
 
@@ -33,7 +39,7 @@ builder.Services.AddResponseCompression(opts =>
 builder.Services.AddScoped<ServerCallService>();
 builder.Services.AddScoped<SignalRCallService>();
 builder.Services.AddScoped<JwtTokenService>();
-builder.Services.AddScoped<OrderCallService>();
+builder.Services.AddScoped<OrderCallSignalRClientService>();
 
 //Controller
 builder.Services.AddControllers();
@@ -43,6 +49,28 @@ builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+builder.Services.AddScoped<RiderManager>();
+
+//Database
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+builder.Services.AddDbContext<OrderDbContext>(op =>
+    op.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+//Identity
+builder.Services.AddIdentityCore<User>(op =>
+    {
+        op.SignIn.RequireConfirmedAccount = false;
+        op.Password.RequireDigit = false;
+        op.Password.RequireLowercase = false;
+        op.Password.RequireNonAlphanumeric = false;
+        op.Password.RequireUppercase = false;
+        op.Password.RequiredLength = 6;
+    })
+    .AddRoles<IdentityRole>()
+    .AddSignInManager()
+    .AddEntityFrameworkStores<OrderDbContext>()
+    .AddDefaultTokenProviders();
 
 //Authentication
 builder.Services.AddAuthentication(op =>
@@ -74,33 +102,14 @@ builder.Services.AddAuthentication(op =>
     })
     .AddIdentityCookies();
 
-
-//Database
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-builder.Services.AddDbContext<OrderDbContext>(op =>
-    op.UseSqlServer(connectionString));
-builder.Services.AddDatabaseDeveloperPageExceptionFilter();
-
-//Identity
-builder.Services.AddIdentityCore<User>(op =>
-    {
-        op.SignIn.RequireConfirmedAccount = false;
-        op.Password.RequireDigit = false;
-        op.Password.RequireLowercase = false;
-        op.Password.RequireNonAlphanumeric = false;
-        op.Password.RequireUppercase = false;
-        op.Password.RequiredLength = 6;
-    })
-    .AddEntityFrameworkStores<OrderDbContext>()
-    .AddSignInManager()
-    .AddDefaultTokenProviders();
-
 //Email Sender
 builder.Services.AddSingleton<IEmailSender<User>, IdentityNoOpEmailSender>();
 
 
 /*********************App *********************/
 var app = builder.Build();
+
+await AppInitializer.InitializeAsync(app);
 
 app.UseResponseCompression();
 

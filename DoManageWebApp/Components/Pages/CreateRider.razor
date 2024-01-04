@@ -1,0 +1,109 @@
+@page "/CreateRider"
+@rendermode InteractiveServer
+@using Microsoft.AspNetCore.Identity
+@using OrderDbLib.Entities
+@using WebUtlLib.Services
+@using Syncfusion.Blazor.Inputs
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.Buttons
+@using Syncfusion.Blazor.Popups
+@using System.ComponentModel.DataAnnotations
+@inject UserManager<User> UserManager
+@inject RiderManager RiderManager
+
+<h1>Create Rider</h1>
+
+<SfGrid TItem="Rider" TValue="Rider" DataSource="Riders" EnableHover="true">
+    <GridPageSettings PageSize="40"></GridPageSettings>
+    <GridColumns>
+        <GridColumn Width="50" Field="@nameof(Rider.Id)" HeaderText="Id"></GridColumn>
+        <GridColumn Field="@nameof(Rider.User.UserName)" HeaderText="Username">
+            <Template>
+                @{
+                    var rider = (Rider)context;
+                    <span>@rider.User.UserName</span>
+                }
+            </Template>
+        </GridColumn>
+        <GridColumn Field="@nameof(Rider.Name)" HeaderText="Name"></GridColumn>
+        <GridColumn Field="@nameof(Rider.Phone)" HeaderText="Phone"></GridColumn>
+        <GridColumn Width="50" DisplayAsCheckBox="true" Field="@nameof(Rider.IsWorking)" HeaderText="Is Working"></GridColumn>
+        <GridColumn Field="@nameof(Rider.UserId)" HeaderText="UserId"></GridColumn>
+    </GridColumns>
+</SfGrid>
+
+<EditForm Model="@Model" OnValidSubmit="CreateRiderAsync">
+    <DataAnnotationsValidator/>
+    <ValidationSummary/>
+    <div class="form-group">
+        <label for="username">Username:</label>
+        <SfTextBox @bind-Value="@Model.Username" Placeholder="Enter username"/>
+    </div>
+    <div class="form-group">
+        <label for="phone">Phone:</label>
+        @* <SfTextBox @bind-Value="@Model.Phone" Placeholder="Enter phone" Type="InputType.Tel"/> *@
+        <SfMaskedTextBox @bind-Value="@Model.Phone"Width="200" Placeholder="Enter phone" Mask="000-000-0009"/>
+    </div>
+    <div class="form-group">
+        <label for="password":>Password</label>
+        <SfTextBox @bind-Value="@Model.Password" Placeholder="Enter password" Type="InputType.Password"/>
+    </div>
+    <div class="form-group">
+        <label for="confirmPassword:">Confirm Password</label>
+        <SfTextBox @bind-Value="@Model.ConfirmPassword" Placeholder="Confirm password" Type="InputType.Password"/>
+    </div>
+    <SfButton Content="Create Rider" />
+</EditForm>
+<SfDialog ShowCloseIcon="true" Width="300" IsModal="true" @bind-Visible="ShowModal">
+    <DialogTemplates>
+        <Content>
+            <b class="text-success">@ModalMessage</b>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+@code {
+    private RegisterModel Model = new RegisterModel();
+    public bool ShowModal { get; set; }
+    public string ModalMessage { get; set; } = string.Empty;
+    public List<Rider> Riders { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var list = await RiderManager.GetAllRidersAsync(false);
+        Riders = list.ToList();
+    }
+
+    private async Task CreateRiderAsync()
+    {
+        var user = Entity.Instance<User>();
+        user.UserName = Model.Username;
+        user.PhoneNumber = Model.Phone;
+        user.Lingau = Entity.Instance<Lingau, string>(Guid.NewGuid().ToString());
+        var result = await UserManager.CreateAsync(user, Model.Password);
+        if (!result.Succeeded)
+        {
+            ModalMessage = result.Errors.FirstOrDefault()?.Description ?? "Unknown error!";
+            return;
+        }
+        await UserManager.AddToRoleAsync(user, WebUtlLib.Auth.Role_Rider);
+        var rider = await RiderManager.CreateRiderAsync(user);
+        Model.Reset();
+        ModalMessage = $"Rider {rider.Name} created!";
+        ShowModal = true;
+    }
+
+    private class RegisterModel
+    {
+        [Required(ErrorMessage = "Please enter {0}")]public string Username { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Please enter {0}")] public string Password { get; set; } = string.Empty;
+        [Compare(nameof(Password),ErrorMessage = "Password does not match!")]public string ConfirmPassword { get; set; } = string.Empty;
+
+        public void Reset()
+        {
+            Username = string.Empty;
+            Phone = string.Empty;
+            Password = string.Empty;
+        }
+    }
+}

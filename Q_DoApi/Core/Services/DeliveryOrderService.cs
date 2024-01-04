@@ -8,11 +8,13 @@ using OrderApiFun.Core.Services;
 using OrderDbLib;
 using OrderDbLib.Entities;
 using OrderHelperLib.Contracts;
+using OrderHelperLib.Dtos;
 using OrderHelperLib.Dtos.DeliveryOrders;
 using Q_DoApi.Core.Utls;
 using Q_DoApi.DtoMapping;
 using Utls;
 using WebUtlLib;
+using WebUtlLib.Services;
 
 namespace Q_DoApi.Core.Services
 {
@@ -128,7 +130,7 @@ namespace Q_DoApi.Core.Services
             var list = await query.OrderByDescending(o => o.CreatedAt)
                 .Skip(pageSize * index)
                 .Take(pageSize)
-                .ToArrayAsync();
+                .ToListAsync();
             return new PageList<DeliveryOrder>(index, pageSize, count, list);
         }
 
@@ -159,7 +161,7 @@ namespace Q_DoApi.Core.Services
             var array = await query
                 .Skip(pageSize * index)
                 .Take(pageSize)
-                .ToArrayAsync();
+                .ToListAsync();
 
             return PageList.Instance(index, pageSize, count, array);
         }
@@ -174,7 +176,8 @@ namespace Q_DoApi.Core.Services
             return AddInOrderedSorts(sorts, query).FirstOrDefaultAsync();
         }
 
-        public async ValueTask<ResultOf<DeliveryOrder>> Do_SubState_Update(DeliveryOrder order, TransitionRoles role, int subState, ILogger log)
+        public async ValueTask<ResultOf<DeliveryOrder>> Do_SubState_Update(DeliveryOrder order, TransitionRoles role,
+            string subState, ILogger log)
         {
             log.Event($"Order.{order.Id}, {order.SubState} => {subState}, subState = {subState}");
             if (!DoStateMap.IsAssignableSubState(role, order.SubState, subState))
@@ -188,9 +191,10 @@ namespace Q_DoApi.Core.Services
         /// </summary>
         /// <returns></returns>
         /// <exception cref="ArgumentException"></exception>
-        private async Task UpdateOrderStateAsync(DeliveryOrder order, int subState, ILogger log)
+        private async Task UpdateOrderStateAsync(DeliveryOrder order, string subState, ILogger log)
         {
             var state = DoStateMap.GetState(subState);
+            if (state == null) throw new ArgumentException($"Invalid subState: {subState}");
             order.Status = state.Status;
             order.SubState = subState;
             order.AddStateHistory(state);
@@ -336,17 +340,21 @@ namespace Q_DoApi.Core.Services
             async Task<double> GetGoogleMatrixDistance(double startLat, double startLng, double endLat,
                 double endLng)
             {
-                var apiKey = "AIzaSyAaKnJtZ3GaxLAv1YPcxdM9u1QVCBKao1E"; // 替换为您的 API 密钥
-                var requestUrl =
-                    $"https://maps.googleapis.com/maps/api/distancematrix/json?origins={startLat},{startLng}&destinations={endLat},{endLng}&key={apiKey}";
-
-                using var client = new HttpClient();
-                var response = await client.GetAsync(requestUrl);
-                if (!response.IsSuccessStatusCode) return -1;
-                string content = await response.Content.ReadAsStringAsync();
-                JObject jsonResponse = JObject.Parse(content);
                 try
                 {
+                    var apiKey = Config.GetGoogleApiKey();
+                    var requestUrl =
+                        $"https://maps.googleapis.com/maps/api/distancematrix/json?origins={startLat},{startLng}&destinations={endLat},{endLng}&key={apiKey}";
+                    log.Event($"Requesting ... {requestUrl}");
+                    using var client = new HttpClient();
+                    var response = await client.GetAsync(requestUrl);
+                    var content = await response.Content.ReadAsStringAsync();
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        log.Event($"Failed: {response.StatusCode}\n{content}");
+                        return -1;
+                    }
+                    JObject jsonResponse = JObject.Parse(content);
                     // 解析 JSON 数据以获取距离（米）
                     var obj = jsonResponse["rows"][0]["elements"][0];
                     var meters = (double)obj["distance"]["value"];

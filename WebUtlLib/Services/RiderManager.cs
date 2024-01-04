@@ -2,7 +2,7 @@
 using OrderDbLib;
 using OrderDbLib.Entities;
 
-namespace OrderApiFun.Core.Services;
+namespace WebUtlLib.Services;
 
 public class RiderManager
 {
@@ -53,5 +53,12 @@ public class RiderManager
     {
         if(string.IsNullOrEmpty(userId)) return null;
         return await Db.Riders.FirstOrDefaultAsync(d => !d.IsDeleted && d.UserId == userId);
+    }
+
+    public async Task<IEnumerable<Rider>> GetAllRidersAsync(bool tracking = true)
+    {
+        var query = Db.Riders.Include(r=>r.User).Where(d => !d.IsDeleted);
+        if (tracking) query = query.AsNoTracking();
+        return await query.ToListAsync();
     }
 }

@@ -15,17 +15,18 @@ using Q_DoApi.Core.Extensions;
 using Q_DoApi.Core.Services;
 using Utls;
 using WebUtlLib;
+using WebUtlLib.Services;
 
 namespace Q_DoApi.Funcs
 {
-    public class LoginFunc
+    public class AuthFunc
     {
         private JwtTokenService JwtService { get; }
         private LingauManager LingauManager { get; }
         private UserManager<User> UserManager { get; }
         private RiderManager RiderManager { get; }
 
-        public LoginFunc(JwtTokenService jwtService, UserManager<User> userManager, RiderManager riderManager, LingauManager lingauManager)
+        public AuthFunc(JwtTokenService jwtService, UserManager<User> userManager, RiderManager riderManager, LingauManager lingauManager)
         {
             JwtService = jwtService;
             UserManager = userManager;

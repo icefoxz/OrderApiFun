@@ -5,16 +5,18 @@ using System.Runtime.CompilerServices;
 using Microsoft.EntityFrameworkCore;
 using OrderHelperLib;
 using WebUtlLib;
+using Utls;
 
 namespace DoManageWebApp.SignalHub;
 
-public class OrderCallService
+//处理订单的SignalR更新服务, 根据不同的状态向不同的客户端推送消息
+public class OrderCallSignalRClientService
 {
     private ServerCallService _serverCall;
     private ILoggerFactory _factory;
     private OrderDbContext _db;
 
-    public OrderCallService(ServerCallService serverCall, ILoggerFactory factory, OrderDbContext db)
+    public OrderCallSignalRClientService(ServerCallService serverCall, ILoggerFactory factory, OrderDbContext db)
     {
         _serverCall = serverCall;
         _factory = factory;
@@ -41,29 +43,49 @@ public class OrderCallService
             .FirstOrDefaultAsync(o => !o.IsDeleted && o.Id == orderId);
 
         if (o == null) return;
-        var bag = DataBag.SerializeWithName(SignalREvents.Call_Do_Ver, o.Id, o.Version, o.Status);
+        var bag = DataBag.SerializeWithName(SignalREvents.Call_Do_Ver, o.Id, o.Version, o.Status, o.SubState);
 
-        //update to sender
-        CallUser(o.Sender, bag);
-        log.Event($"UpdateOrder({orderId}) to Sender({o.Sender} : {bag})");
-        //update to receiver
-        if (!string.IsNullOrEmpty(o.Receiver))
-        {
-            CallUser(o.Receiver, bag);
-            log.Event($"UpdateOrder({orderId}) to Receiver({o.Receiver} : {bag})");
-        }
+        OnSenderUpdate();
+        OnReceiverUpdate();
+        OnRiderUpdate();
+        return;
 
-        //update to rider(s)
-        if (o.Status.ConvertToDoStatus() == DeliveryOrderStatus.Created ||
-            DoStateMap.GetState(o.SubState)?.GetStatus == DeliveryOrderStatus.Created)
+        void OnRiderUpdate()
         {
+            //update to rider(s)
+            if (!string.IsNullOrEmpty(o.Rider?.UserId))
+            {
+                CallUser(o.Rider.UserId, bag);
+                log.Event($"UpdateOrder({orderId}) to Rider({o.Rider.UserId} : {bag})");
+            }
+            
             BroadcastRiders(bag);
             log.Event($"UpdateOrder({orderId}) to Riders({bag})");
+            return;
+
+            //bool ShouldBroadcastToRider()
+            //{
+            //    var isCreatedStatus = o.Status.ConvertToDoStatus() == DeliveryOrderStatus.Created;
+            //    var isCreatedSubState = DoStateMap.GetState(o.SubState)?.GetStatus == DeliveryOrderStatus.Created;
+            //
+            //}
         }
-        else if (!string.IsNullOrEmpty(o.Rider?.UserId))
+
+        void OnReceiverUpdate()
         {
-            CallUser(o.Rider.UserId, bag);
-            log.Event($"UpdateOrder({orderId}) to Rider({o.Rider.UserId} : {bag})");
+            //update to receiver
+            if (!string.IsNullOrEmpty(o.Receiver))
+            {
+                CallUser(o.Receiver, bag);
+                log.Event($"UpdateOrder({orderId}) to Receiver({o.Receiver} : {bag})");
+            }
+        }
+
+        void OnSenderUpdate()
+        {
+            //update to sender
+            CallUser(o.Sender, bag);
+            log.Event($"UpdateOrder({orderId}) to Sender({o.Sender} : {bag})");
         }
     }
 

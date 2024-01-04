@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.SignalR;
 using OrderApiFun.Core.Services;
-using OrderHelperLib;
 using System.Security.Claims;
 using Azure.Identity;
 using OrderDbLib;
 using OrderHelperLib.Contracts;
-using Auth = OrderApiFun.Core.Middlewares.Auth;
+using Utls;
+using Auth = WebUtlLib.Auth;
 
 namespace DoManageWebApp.SignalHub
 {

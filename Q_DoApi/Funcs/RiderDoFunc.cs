@@ -13,6 +13,7 @@ using Q_DoApi.Core.Extensions;
 using Q_DoApi.Core.Services;
 using Utls;
 using WebUtlLib;
+using WebUtlLib.Services;
 
 namespace Q_DoApi.Funcs
 {
@@ -64,7 +65,7 @@ namespace Q_DoApi.Funcs
 
             var pg = await DoService.DoPage_GetAsync(pageSize, index, log,
                 d => d.Rider == null && d.Status == 0);
-            var dtoPg = pg.AdaptPageList<DeliveryOrder, DeliverOrderModel>();
+            var dtoPg = pg.AdaptPageList<DeliveryOrder, DeliverOrderModel>(log);
             return await req.WriteBagAsync(funcName, dtoPg);
         }
 
@@ -94,7 +95,7 @@ namespace Q_DoApi.Funcs
 
             var pg = await DoService.DoPage_GetAsync(pageSize, index, log,
                 d => d.RiderId == riderId && d.Status > 0);
-            var dtoPg = pg.AdaptPageList<DeliveryOrder, DeliverOrderModel>();
+            var dtoPg = pg.AdaptPageList<DeliveryOrder, DeliverOrderModel>(log);
             return await req.WriteBagAsync(funcName, dtoPg);
         }
 
@@ -124,7 +125,7 @@ namespace Q_DoApi.Funcs
 
             var pg = await DoService.DoPage_GetAsync(pageSize, index, log,
                 d => d.RiderId == riderId && d.Status < 0);
-            var dtoPg = pg.AdaptPageList<DeliveryOrder, DeliverOrderModel>();
+            var dtoPg = pg.AdaptPageList<DeliveryOrder, DeliverOrderModel>(log);
             return await req.WriteBagAsync(funcName, dtoPg);
         }
 
@@ -145,7 +146,7 @@ namespace Q_DoApi.Funcs
             FunctionContext context)
         {
             var (funcName, bag, log) = await req.GetBagWithLogAsync(context);
-            var subState = bag.Get<int>(0);
+            var subState = bag.Get<string>(0);
             var subStates = DoStateMap.GetPossibleStates(TransitionRoles.Rider, subState);
             return await req.WriteBagAsync(funcName, new object[] { subStates.Select(s => s.StateId).ToArray() });
         }
@@ -215,7 +216,7 @@ namespace Q_DoApi.Funcs
         private async Task<ResultOf<DeliveryOrder>> Rider_Do_StateUpdate(DataBag bag, long? riderId, ILogger log)
         {
             var deliveryOrderId = bag.Get<int>(0);
-            var subState = bag.Get<int>(1);
+            var subState = bag.Get<string>(1);
             var order = await DoService.Do_FirstAsync(o => o.Id == deliveryOrderId && o.RiderId == riderId);
             if (order == null)
                 return ResultOf.Fail<DeliveryOrder>("Order not found!");

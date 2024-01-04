@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.Functions.Worker;
 using OrderApiFun.Core.Middlewares;
+using WebUtlLib;
 
 namespace Q_DoApi.Core.Extensions
 {

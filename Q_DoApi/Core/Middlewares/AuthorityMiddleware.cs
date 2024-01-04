@@ -9,6 +9,7 @@ using OrderApiFun.Core.Services;
 using OrderApiFun.Core.Tokens;
 using OrderDbLib;
 using Q_DoApi.Funcs;
+using WebUtlLib;
 
 namespace OrderApiFun.Core.Middlewares
 {
@@ -118,7 +119,7 @@ namespace OrderApiFun.Core.Middlewares
 
             var result = await TokenValidationAsync(bearerToken);
             //如果用户要刷新token,需要提交刷新令牌, 但一般都是提交AccessToken
-            var tokenType = functionName == nameof(LoginFunc.User_ReloginApi)
+            var tokenType = functionName == nameof(AuthFunc.User_ReloginApi)
                 ? JwtTokenService.RefreshTokenHeader
                 : JwtTokenService.AccessTokenHeader;
             if (!await VerifyTokenTypeAsync(context, log, result, req, tokenType)) return;

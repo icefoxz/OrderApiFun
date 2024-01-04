@@ -9,6 +9,7 @@ using OrderApiFun.Core.Services;
 using OrderDbLib;
 using OrderDbLib.Entities;
 using Q_DoApi.Core.Services;
+using WebUtlLib.Services;
 
 var builder = new HostBuilder()
     .ConfigureFunctionsWebApplication(app => app.UseMiddleware<AuthorityMiddleware>())
@@ -44,7 +45,6 @@ var builder = new HostBuilder()
             ;
 
         s.AddDataProtection();
-        s.AddSingleton<RoleInitializer>();
         //.AddTokenProvider<JwtTokenService>(JwtTokenService.ProviderName); // 添加自定义的 JwtTokenProvider
         //.AddTokenProvider<DataProtectorTokenProvider<ApplicationUser>>("Default") // 添加内置的 DataProtectorTokenProvider
         // 注册 JwtTokenProvider
@@ -97,4 +97,6 @@ public static class Config
     private const string BlobContainerName = "BlobContainerName";
     public static string GetBlobContainerName() => Get(BlobContainerName);
 
+    private const string GoogleApiKey = "GoogleApiKey";
+    public static string GetGoogleApiKey() => Get(GoogleApiKey);
 }

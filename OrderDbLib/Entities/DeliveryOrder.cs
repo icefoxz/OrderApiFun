@@ -39,7 +39,7 @@ namespace OrderDbLib.Entities
         public int Status { get; set; }
 
         //订单子状态
-        public int SubState { get; set; }
+        public string SubState { get; set; }
 
         //订单状态历史(进程)
         public StateSegment[] StateHistory { get; set; } = Array.Empty<StateSegment>();
@@ -54,10 +54,10 @@ namespace OrderDbLib.Entities
     //订单状态进程, 用于记录订单的状态变化
     public class StateSegment
     {
-        public int SubState { get; set; }
+        public string SubState { get; set; } = string.Empty;
         public DateTime Timestamp { get; set; }
-        public string? ImageUrl { get; set; }
-        public string? Remark { get; set; }
+        public string Type { get; set; } = "None"; // 状态类型, 例如: "Remark", "Images
+        public string? Data { get; set; }
     }
 
     public class PaymentInfo

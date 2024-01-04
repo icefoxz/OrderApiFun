@@ -1,4 +1,4 @@
-﻿namespace OrderApiFun.Core.Middlewares;
+﻿namespace WebUtlLib;
 
 public static class Auth
 {

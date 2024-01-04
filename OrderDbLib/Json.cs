@@ -34,7 +34,7 @@ namespace Utls
         }
 
         public static object[] DeserializeObjs(string value) => Deserialize<object[]>(value);
-        public static string Serialize(object obj) => JsonConvert.SerializeObject(obj);
+        public static string Serialize(object obj) => JsonConvert.SerializeObject(obj, Settings);
 
         public static T? Deserialize<T>(string? value) where T : class
         {

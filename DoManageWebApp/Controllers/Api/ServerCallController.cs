@@ -4,8 +4,8 @@ using DoManageWebApp.SignalHub;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OrderDbLib;
-using OrderHelperLib;
 using OrderHelperLib.Contracts;
+using Utls;
 using WebUtlLib;
 
 namespace DoManageWebApp.Controllers.Api
@@ -16,9 +16,9 @@ namespace DoManageWebApp.Controllers.Api
     {
         private ILoggerFactory _logFac;
         private ServerCallService _call;
-        private OrderCallService _orderCallService;
+        private OrderCallSignalRClientService _orderCallService;
         private OrderDbContext _db;
-        public ServerCallController(ServerCallService call, OrderCallService orderCallService, ILoggerFactory logFac, OrderDbContext db)
+        public ServerCallController(ServerCallService call, OrderCallSignalRClientService orderCallService, ILoggerFactory logFac, OrderDbContext db)
         {
             _call = call;
             _orderCallService = orderCallService;
