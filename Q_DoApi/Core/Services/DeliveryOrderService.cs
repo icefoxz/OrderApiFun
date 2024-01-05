@@ -186,6 +186,25 @@ namespace Q_DoApi.Core.Services
             return ResultOf.Success(order, string.Empty);
         }
 
+        public async ValueTask<ResultOf<DeliveryOrder>> Do_Images_Add(long orderId, string subState,
+            int segmentIndex, string image, ILogger log)
+        {
+            var order = await Do_FirstAsync(o => o.Id == orderId && !o.IsDeleted);
+            if (order == null) return ResultOf.Fail<DeliveryOrder>("Order not found!");
+            var orderStatus = (DeliveryOrderStatus)order.Status;
+            if (orderStatus.IsClosed()) return ResultOf.Fail<DeliveryOrder>("Order is closed!");
+            log.Event($"Order.{order.Id}, {order.SubState} <---Add {image}");
+
+            if (order.StateHistory is null || order.StateHistory.Length == segmentIndex)
+                order.AddStateHistory(subState, StateSegments.Type.Images, "[]");
+            var seg = order.StateHistory[segmentIndex];
+            var images = Json.Deserialize<List<string>>(seg.Data) ?? new List<string>();
+            images.Add(image);
+            order.AddStateHistory(subState, images.ToArray());
+            await Db.SaveChangesAsync();
+            return ResultOf.Success(order, string.Empty);
+        }
+
         /// <summary>
         /// 更新订单状态
         /// </summary>

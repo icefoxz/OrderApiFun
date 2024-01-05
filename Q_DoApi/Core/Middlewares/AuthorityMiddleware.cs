@@ -84,8 +84,7 @@ namespace OrderApiFun.Core.Middlewares
             }
             if (!await VerifyTokenTypeAsync(context, log, result, req, JwtTokenService.AccessTokenHeader)) return;
 
-            var role = JwtTokenService.GetRole(result);
-            if (role != Auth.Role_Rider)
+            if (!JwtTokenService.IsInContextRole(result,Auth.Role_Rider))
             {
                 var message = "Token role not matched!";
                 // 如果令牌无效，设置一个适当的响应
@@ -101,6 +100,7 @@ namespace OrderApiFun.Core.Middlewares
             if (!isRiderExist) return;
             context.Items[Auth.ContextRole] = Auth.Role_Rider;
             context.Items[Auth.RiderId] = riderId;
+            context.Items[Auth.UserId] = JwtTokenService.GetUserId(result);
             await next.Invoke(context);
         }
 
@@ -142,8 +142,7 @@ namespace OrderApiFun.Core.Middlewares
                 return false;
             }
 
-            var role = JwtTokenService.GetRole(result);
-            if (role != Auth.Role_User)
+            if (JwtTokenService.IsInContextRole(result,Auth.Role_User))
             {
                 var message = "Token role not matched!";
                 // 如果令牌无效，设置一个适当的响应

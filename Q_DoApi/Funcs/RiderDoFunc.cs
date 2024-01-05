@@ -24,18 +24,24 @@ namespace Q_DoApi.Funcs
         private RiderManager RiderManager { get; }
         private UserManager<User> UserManager { get; }
         private SignalRCall SignalRCall { get; }
+        private BlobService BlobService { get; }
+        private JwtTokenService JwtTokenService { get; }
 
         public RiderDoFunc(DoService doService,
             UserManager<User> userManager,
             RiderManager riderManager,
             LingauManager lingauManager, 
-            SignalRCall signalRCall)
+            SignalRCall signalRCall, 
+            BlobService blobService, 
+            JwtTokenService jwtTokenService)
         {
             DoService = doService;
             UserManager = userManager;
             RiderManager = riderManager;
             LingauManager = lingauManager;
             SignalRCall = signalRCall;
+            BlobService = blobService;
+            JwtTokenService = jwtTokenService;
         }
 
         [Function(nameof(Rider_Get_Unassigned))]
@@ -209,13 +215,32 @@ namespace Q_DoApi.Funcs
             SignalRCall.Update_Do_Call(result.Data.Id, log);
             return await req.WriteBagAsync(functionName, result.Data.Adapt<DeliverOrderModel>());
         }
+        
+        [Function(nameof(Rider_Do_GetUpdateImagesToken))]
+        public async Task<HttpResponseData> Rider_Do_GetUpdateImagesToken(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post")]
+            HttpRequestData req,
+            FunctionContext context)
+        {
+            var riderId = context.GetRiderId();
+            var userId = context.GetUserId();
+            var (functionName, bag, log) = await req.GetBagWithLogAsync(context);
+            var orderId = bag.Get<long>(0);
+            var order = await DoService.Do_FirstAsync(o =>
+                o.Id == orderId && o.RiderId == riderId && o.Status >= 0);
+            if (order == null)
+                return await req.WriteStringAsync("Order not found!");
+            var token = JwtTokenService.GenerateRiderUploadImagesToken(userId, riderId.Value, order);
+            if (string.IsNullOrWhiteSpace(token)) return await req.WriteStringAsync("Token generation failed!");
+            return await req.WriteBagAsync(functionName, token);
+        }
 
         /// <summary>
         /// 更新订单状态 bag[doId,subState]
         /// </summary>
         private async Task<ResultOf<DeliveryOrder>> Rider_Do_StateUpdate(DataBag bag, long? riderId, ILogger log)
         {
-            var deliveryOrderId = bag.Get<int>(0);
+            var deliveryOrderId = bag.Get<long>(0);
             var subState = bag.Get<string>(1);
             var order = await DoService.Do_FirstAsync(o => o.Id == deliveryOrderId && o.RiderId == riderId);
             if (order == null)

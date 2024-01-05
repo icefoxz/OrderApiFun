@@ -129,7 +129,7 @@ public class UserDoFunc
         DeliveryOrder? order;
         try
         {
-            var deliveryOrderId = bag.Get<int>(0);
+            var deliveryOrderId = bag.Get<long>(0);
             var result = await DoService.DoPay_ByLingau(userId, deliveryOrderId, log);
             if (!result.IsSuccess)
                 return await req.WriteStringAsync(result.Message);

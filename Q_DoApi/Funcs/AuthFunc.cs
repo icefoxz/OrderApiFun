@@ -61,25 +61,33 @@ namespace Q_DoApi.Funcs
             var token = JwtService.GenerateUserAccessToken(user);
             var refreshToken = JwtService.GenerateUserRefreshToken(user);
             var successResponse = req.CreateResponse(HttpStatusCode.OK);
+            var loginResult = GetLoginResult(token, refreshToken, user);
+            var bag = DataBag.SerializeWithName(nameof(Login_Result), loginResult);
+            await successResponse.WriteStringAsync(bag);
+            return successResponse;
+        }
+
+        private static Login_Result GetLoginResult(string token, string refreshToken, User user)
+        {
             var loginResult = new Login_Result
             {
                 access_token = token,
                 refresh_token = refreshToken,
                 signalRUrl = Config.GetSignalRHubUrl(),
+                imageServerUrl = Config.GetImageServerUrl(),
                 User = new UserModel
                 {
                     Id = user.Id,
                     Username = user.UserName,
                     Email = user.Email,
                     Phone = user.PhoneNumber,
-                    Name = user.Name
+                    Name = user.Name,
+                    Lingau = user.Lingau?.Adapt<LingauModel>()??new LingauModel()
                 }
             };
-            var bag = DataBag.SerializeWithName(nameof(Login_Result), loginResult);
-            await successResponse.WriteStringAsync(bag);
-            return successResponse;
-        }        
-        
+            return loginResult;
+        }
+
         [Function(nameof(Anonymous_Rider_Create))]
         public async Task<HttpResponseData> Anonymous_Rider_Create(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)]
@@ -106,20 +114,7 @@ namespace Q_DoApi.Funcs
 
             var token = JwtService.GenerateRiderAccessToken(user, rider);
             var refreshToken = JwtService.GenerateRiderRefreshToken(user, rider.Id);
-            var loginResult = new Login_Result
-            {
-                access_token = token,
-                refresh_token = refreshToken,
-                signalRUrl = Config.GetSignalRHubUrl(),
-                User = new UserModel
-                {
-                    Id = user.Id,
-                    Username = user.UserName,
-                    Email = user.Email,
-                    Phone = user.PhoneNumber,
-                    Name = user.Name
-                }
-            };
+            var loginResult = GetLoginResult(token, refreshToken, user);
             return await req.WriteBagAsync(functionName, loginResult);
         }
 
@@ -145,21 +140,8 @@ namespace Q_DoApi.Funcs
             var token = JwtService.GenerateUserAccessToken(user);
             var refreshToken = JwtService.GenerateUserRefreshToken(user);
             var lingau = await LingauManager.GetLingauAsync(user.Id);
-            var result = new Login_Result
-            {
-                access_token = token,
-                refresh_token = refreshToken,
-                signalRUrl = Config.GetSignalRHubUrl(),
-                User = new UserModel
-                {
-                    Id = user.Id,
-                    Username = user.UserName,
-                    Email = user.Email,
-                    Phone = user.PhoneNumber,
-                    Name = user.Name,
-                    Lingau = lingau.Adapt<LingauModel>()
-                }
-            };
+            user.Lingau = lingau;
+            var result = GetLoginResult(token, refreshToken, user);
             return await req.WriteBagAsync(functionName, result);
         }
 
@@ -187,20 +169,7 @@ namespace Q_DoApi.Funcs
 
             var token = JwtService.GenerateRiderAccessToken(user, rider);
             var refreshToken = JwtService.GenerateRiderRefreshToken(user, rider.Id);
-            var result = new Login_Result
-            {
-                access_token = token,
-                refresh_token = refreshToken,
-                signalRUrl = Config.GetSignalRHubUrl(),
-                User = new UserModel
-                {
-                    Id = rider.Id.ToString(),
-                    Username = user.UserName,
-                    Email = user.Email,
-                    Phone = user.PhoneNumber,
-                    Name = user.Name
-                }
-            };
+            var result = GetLoginResult(token, refreshToken, user);
             return await req.WriteBagAsync(functionName, result);
         }
     
@@ -247,20 +216,7 @@ namespace Q_DoApi.Funcs
             }
             else newAccessToken = JwtService.GenerateUserAccessToken(user);
 
-            var loginResult = new Login_Result
-            {
-                access_token = newAccessToken,
-                refresh_token = refreshToken,
-                signalRUrl = Config.GetSignalRHubUrl(),
-                User = new UserModel
-                {
-                    Id = user.Id,
-                    Username = user.UserName,
-                    Email = user.Email,
-                    Phone = user.PhoneNumber,
-                    Name = user.Name
-                }
-            };
+            var loginResult = GetLoginResult(newAccessToken, refreshToken, user);
             return await req.WriteBagAsync(functionName, loginResult);
 
         }

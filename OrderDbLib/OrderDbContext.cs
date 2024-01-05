@@ -68,6 +68,7 @@ namespace OrderDbLib
         {
             return new StateSegment
             {
+                StateName = s.StateName,
                 Data = s.Data,
                 Type = s.Type,
                 SubState = s.SubState,

@@ -54,6 +54,7 @@ namespace OrderDbLib.Entities
     //订单状态进程, 用于记录订单的状态变化
     public class StateSegment
     {
+        public string StateName { get; set; } = string.Empty;
         public string SubState { get; set; } = string.Empty;
         public DateTime Timestamp { get; set; }
         public string Type { get; set; } = "None"; // 状态类型, 例如: "Remark", "Images

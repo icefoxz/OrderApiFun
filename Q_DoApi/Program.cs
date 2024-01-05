@@ -99,4 +99,7 @@ public static class Config
 
     private const string GoogleApiKey = "GoogleApiKey";
     public static string GetGoogleApiKey() => Get(GoogleApiKey);
+
+    private const string ImageServerUrl = "ImageServerUrl";
+    public static string GetImageServerUrl() => Get(ImageServerUrl);
 }

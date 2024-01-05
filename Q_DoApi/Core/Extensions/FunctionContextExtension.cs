@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.Azure.Functions.Worker;
-using OrderApiFun.Core.Middlewares;
+﻿using Microsoft.Azure.Functions.Worker;
 using WebUtlLib;
 
 namespace Q_DoApi.Core.Extensions

@@ -12,6 +12,9 @@ public static class StateHistoryExtension
         order.AddStateHistory(state.StateId, StateSegments.Type.Remark, remark);
     public static void AddStateHistory(this DeliveryOrder order, DoSubState state, StateSegments.Type type, string data) =>
         order.AddStateHistory(state.StateId, type, data);
+
+    public static void AddStateHistory(this DeliveryOrder order, DoSubState state, string[] images) =>
+        order.AddStateHistory(state.StateId, images);
     public static void AddStateHistory(this DeliveryOrder order, string subState) =>
         order.AddStateHistory(subState, StateSegments.Type.None);
     public static void AddStateHistory(this DeliveryOrder order, string subState, string remark) =>
@@ -21,8 +24,10 @@ public static class StateHistoryExtension
     public static void AddStateHistory(this DeliveryOrder order, string subState,
         StateSegments.Type type, string? data = null)
     {
+        var state = DoStateMap.GetState(subState);
         var ss = new StateSegment
         {
+            StateName = state?.StateName ?? string.Empty,
             SubState = subState,
             Timestamp = DateTime.Now,
             Type = type.Text(),
